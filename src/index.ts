@@ -167,7 +167,7 @@ function qualifyTablePath(sql: string, projectId: string): string {
   });
 }
 
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
+export const handleListResources = async () => {
   try {
     console.error('Fetching datasets...');
     const [datasets] = await bigquery.getDatasets();
@@ -184,11 +184,16 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         // Get the metadata to check if it's a table or view
         const [metadata] = await table.getMetadata();
         const resourceType = metadata.type === 'VIEW' ? 'view' : 'table';
+        let resourceName = `"${dataset.id}.${table.id}" ${resourceType} schema`;
+
+        if (metadata.description && metadata.description.trim() !== '') {
+          resourceName += " (has description)";
+        }
         
         resources.push({
           uri: new URL(`${dataset.id}/${table.id}/${SCHEMA_PATH}`, resourceBaseUrl).href,
           mimeType: "application/json",
-          name: `"${dataset.id}.${table.id}" ${resourceType} schema`,
+          name: resourceName,
         });
       }
     }
@@ -199,9 +204,21 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     console.error('Error in ListResourcesRequestSchema:', error);
     throw error;
   }
-});
+};
+server.setRequestHandler(ListResourcesRequestSchema, handleListResources);
 
-server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+// Define the type for the request parameter for handleReadResource
+// This should align with what ReadResourceRequestSchema expects.
+// Assuming ReadResourceRequestSchema implies params.uri exists.
+interface ReadResourceRequestParams {
+  uri: string;
+}
+interface ReadResourceRequest {
+  params: ReadResourceRequestParams;
+  version: string; // Or whatever the SDK type is
+}
+
+export const handleReadResource = async (request: ReadResourceRequest) => {
   const resourceUrl = new URL(request.params.uri);
   const pathComponents = resourceUrl.pathname.split("/");
   const schema = pathComponents.pop();
@@ -216,16 +233,31 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const table = dataset.table(tableId!);
   const [metadata] = await table.getMetadata();
 
+  const tableMetadata = {
+    description: metadata.description || null,
+    lastModifiedTime: metadata.lastModifiedTime,
+    location: metadata.location,
+    type: metadata.type,
+  };
+
+  const fields = metadata.schema.fields.map((field: any) => ({
+    name: field.name,
+    type: field.type,
+    description: field.description || null,
+    mode: field.mode,
+  }));
+
   return {
     contents: [
       {
         uri: request.params.uri,
         mimeType: "application/json",
-        text: JSON.stringify(metadata.schema.fields, null, 2),
+        text: JSON.stringify({ tableMetadata, fields }, null, 2),
       },
     ],
   };
-});
+};
+server.setRequestHandler(ReadResourceRequestSchema, handleReadResource);
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -299,3 +331,6 @@ async function runServer() {
 }
 
 runServer().catch(console.error);
+
+// Exports for testing
+export { server, resourceBaseUrl, SCHEMA_PATH, config, handleListResources, handleReadResource };
