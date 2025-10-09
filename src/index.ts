@@ -161,6 +161,12 @@ let fieldRestrictions: FieldRestrictionMap = {};
 // Aggregation functions that allow restricted columns when used as direct arguments.
 const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum", "min", "max"];
 
+interface StarUsage {
+  qualifier?: string;
+  exceptColumns: Set<string>;
+  exceptBareColumns: Set<string>;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -238,6 +244,117 @@ function referencesSameTable(candidate: string, expected: string): boolean {
   return expected.endsWith(`.${candidate}`);
 }
 
+function extractSelectClause(sql: string): string {
+  const selectMatch = sql.match(/\bselect\b([\s\S]*?)\bfrom\b/);
+  if (!selectMatch) {
+    return '';
+  }
+  return selectMatch[1];
+}
+
+function parseExceptColumns(segment: string): { full: Set<string>; bare: Set<string> } {
+  const full = new Set<string>();
+  const bare = new Set<string>();
+
+  segment
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .forEach((value) => {
+      const cleaned = value.replace(/`/g, '');
+      const normalized = cleaned.toLowerCase();
+      full.add(normalized);
+
+      const bareName = normalized.split('.').pop();
+      if (bareName) {
+        bare.add(bareName);
+      }
+    });
+
+  return { full, bare };
+}
+
+function extractStarUsages(selectClause: string): StarUsage[] {
+  const usages: StarUsage[] = [];
+  if (!selectClause) {
+    return usages;
+  }
+
+  const starPattern = /(?:\b([a-z0-9_.]+)\.)?\*\s*(?:except\s*\(([^)]+)\))?/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = starPattern.exec(selectClause)) !== null) {
+    const matchIndex = match.index ?? starPattern.lastIndex - match[0].length;
+    const precedingIndex = matchIndex - 1;
+    const charBefore = precedingIndex >= 0 ? selectClause[precedingIndex] : ' ';
+
+    if (charBefore === '(') {
+      // Likely part of COUNT(*) or similar aggregate; skip.
+      continue;
+    }
+
+    if (matchIndex > 0 && !/[,\s]/.test(charBefore)) {
+      // Skip tokens appearing in string literals or identifiers (e.g. '*_suffix').
+      continue;
+    }
+
+    const qualifier = match[1]?.toLowerCase();
+    const exceptSegment = match[2];
+    const exceptColumns = new Set<string>();
+    const exceptBareColumns = new Set<string>();
+
+    if (exceptSegment) {
+      const parsed = parseExceptColumns(exceptSegment);
+      parsed.full.forEach((value) => exceptColumns.add(value));
+      parsed.bare.forEach((value) => exceptBareColumns.add(value));
+    }
+
+    usages.push({ qualifier, exceptColumns, exceptBareColumns });
+  }
+
+  return usages;
+}
+
+function starUsageCoversField(
+  usage: StarUsage,
+  field: string,
+  tableName: string,
+  aliasToTableMap: Record<string, string>,
+): boolean {
+  if (usage.exceptBareColumns.has(field)) {
+    return true;
+  }
+
+  if (usage.exceptColumns.has(field)) {
+    return true;
+  }
+
+  if (usage.exceptColumns.has(`${tableName}.${field}`)) {
+    return true;
+  }
+
+  if (!usage.qualifier) {
+    return false;
+  }
+
+  const qualifier = usage.qualifier;
+  if (usage.exceptColumns.has(`${qualifier}.${field}`)) {
+    return true;
+  }
+
+  const resolvedTable = aliasToTableMap[qualifier];
+  if (resolvedTable) {
+    if (usage.exceptColumns.has(`${resolvedTable}.${field}`)) {
+      return true;
+    }
+    if (usage.exceptBareColumns.has(field) && referencesSameTable(resolvedTable, tableName)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap): void {
   if (!Object.keys(restrictions).length) {
     return;
@@ -246,7 +363,8 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
   const normalizedSql = sql.replace(/`/g, '').toLowerCase();
   const blockedColumnsByTable: Record<string, Set<string>> = {};
   const aliasToTableMap = buildTableAliasMap(normalizedSql);
-  const hasSelectAll = /\bselect\s+(?:distinct\s+)?\*/.test(normalizedSql);
+  const selectClause = extractSelectClause(normalizedSql);
+  const starUsages = extractStarUsages(selectClause);
 
   for (const [tableName, restrictedFields] of Object.entries(restrictions)) {
     if (!normalizedSql.includes(tableName)) {
@@ -262,7 +380,34 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
       return aliasPattern.test(normalizedSql);
     });
 
-    if (hasSelectAll || qualifiedStarPattern.test(normalizedSql) || aliasStarDetected) {
+    const relevantStarUsages = starUsages.filter((usage) => {
+      if (!usage.qualifier) {
+        return true;
+      }
+
+      const resolved = aliasToTableMap[usage.qualifier] ?? usage.qualifier;
+      return referencesSameTable(resolved, tableName);
+    });
+
+    const starViolation = ((): boolean => {
+      if (!relevantStarUsages.length && !qualifiedStarPattern.test(normalizedSql) && !aliasStarDetected) {
+        return false;
+      }
+
+      if (!relevantStarUsages.length) {
+        return true;
+      }
+
+      return relevantStarUsages.some((usage) => {
+        if (!usage.exceptBareColumns.size && !usage.exceptColumns.size) {
+          return true;
+        }
+
+        return restrictedFields.some((field) => !starUsageCoversField(usage, field, tableName, aliasToTableMap));
+      });
+    })();
+
+    if (starViolation) {
       if (!blockedColumnsByTable[tableName]) {
         blockedColumnsByTable[tableName] = new Set<string>();
       }
@@ -299,7 +444,7 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
 
     const allowedAggregates = `[${AGGREGATE_FUNCTIONS.map((fn) => `"${fn}"`).join(', ')}]`;
 
-    throw new Error(`Restricted fields detected for ${messageDetails}. You can only use these columns inside ${allowedAggregates} aggregate functions. Review the table schema and adjust your query to remove or aggregate the restricted fields, then try again.`);
+    throw new Error(`Restricted fields detected for ${messageDetails}. You can only use these columns inside ${allowedAggregates} aggregate functions or exclude them with SELECT * EXCEPT (...).`);
   }
 }
 
