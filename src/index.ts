@@ -158,6 +158,9 @@ let resourceBaseUrl: URL;
 type FieldRestrictionMap = Record<string, string[]>;
 let fieldRestrictions: FieldRestrictionMap = {};
 
+// Aggregation functions that allow restricted columns when used as direct arguments.
+const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum", "min", "max"];
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -210,6 +213,31 @@ async function loadFieldRestrictions(restrictionFile?: string): Promise<FieldRes
   }
 }
 
+function buildTableAliasMap(sql: string): Record<string, string> {
+  const aliasMap: Record<string, string> = {};
+  const tableRefPattern = /\b(?:from|join)\s+([a-z0-9_.]+)(?:\s+(?:as\s+)?([a-z0-9_]+))?/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = tableRefPattern.exec(sql)) !== null) {
+    const [, tableName, alias] = match;
+    if (alias) {
+      aliasMap[alias] = tableName;
+    }
+  }
+
+  return aliasMap;
+}
+
+function referencesSameTable(candidate: string, expected: string): boolean {
+  if (candidate === expected) {
+    return true;
+  }
+  if (candidate.endsWith(`.${expected}`)) {
+    return true;
+  }
+  return expected.endsWith(`.${candidate}`);
+}
+
 function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap): void {
   if (!Object.keys(restrictions).length) {
     return;
@@ -217,15 +245,42 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
 
   const normalizedSql = sql.replace(/`/g, '').toLowerCase();
   const blockedColumnsByTable: Record<string, Set<string>> = {};
+  const aliasToTableMap = buildTableAliasMap(normalizedSql);
+  const hasSelectAll = /\bselect\s+(?:distinct\s+)?\*/.test(normalizedSql);
 
   for (const [tableName, restrictedFields] of Object.entries(restrictions)) {
     if (!normalizedSql.includes(tableName)) {
       continue;
     }
 
+    const qualifiedStarPattern = new RegExp(`\\b${escapeRegExp(tableName)}\\.\\*`);
+    const aliasStarDetected = Object.entries(aliasToTableMap).some(([alias, referencedTable]) => {
+      if (!referencesSameTable(referencedTable, tableName)) {
+        return false;
+      }
+      const aliasPattern = new RegExp(`\\b${escapeRegExp(alias)}\\.\\*`);
+      return aliasPattern.test(normalizedSql);
+    });
+
+    if (hasSelectAll || qualifiedStarPattern.test(normalizedSql) || aliasStarDetected) {
+      if (!blockedColumnsByTable[tableName]) {
+        blockedColumnsByTable[tableName] = new Set<string>();
+      }
+      for (const field of restrictedFields) {
+        blockedColumnsByTable[tableName].add(field);
+      }
+    }
+
     for (const field of restrictedFields) {
       const fieldPattern = new RegExp(`\\b${escapeRegExp(field)}\\b`);
-      if (fieldPattern.test(normalizedSql)) {
+      const aggregatePattern = new RegExp(
+        `\\b(?:${AGGREGATE_FUNCTIONS.join('|')})\\s*\\(\\s*(?:distinct\\s+)?(?:[\\w$]+\\.)*${escapeRegExp(field)}\\s*\\)`,
+        'g',
+      );
+
+      const sqlWithoutAggregatedUsage = normalizedSql.replace(aggregatePattern, '');
+
+      if (fieldPattern.test(sqlWithoutAggregatedUsage)) {
         if (!blockedColumnsByTable[tableName]) {
           blockedColumnsByTable[tableName] = new Set<string>();
         }
@@ -242,7 +297,9 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
       })
       .join('; ');
 
-    throw new Error(`Queries on ${messageDetails} are restricted in this tool. Remove the columns from your query and try again.`);
+    const allowedAggregates = `[${AGGREGATE_FUNCTIONS.map((fn) => `"${fn}"`).join(', ')}]`;
+
+    throw new Error(`Restricted fields detected for ${messageDetails}. You can only use these columns inside ${allowedAggregates} aggregate functions. Review the table schema and adjust your query to remove or aggregate the restricted fields, then try again.`);
   }
 }
 

@@ -1,3 +1,4 @@
 {
-  "dev_hy.apero_coverages": ["customer", "subscriber_id", "patient"]
+  "dev_hy.apero_coverages": ["customer", "subscriber_id", "patient"],
+  "dev_hy.approval_requests": ["requester_name"]
 }
