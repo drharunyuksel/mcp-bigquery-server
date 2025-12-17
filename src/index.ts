@@ -18,7 +18,14 @@ interface ServerConfig {
   projectId: string;
   location?: string;
   keyFilename?: string;
-  restrictionFile?: string;
+  configFile?: string;
+  maximumBytesBilled?: string;
+}
+
+// Define BigQuery configuration interface
+interface BigQueryConfig {
+  maximumBytesBilled: string;
+  preventedFields: FieldRestrictionMap;
 }
 
 async function validateConfig(config: ServerConfig): Promise<void> {
@@ -62,24 +69,24 @@ async function validateConfig(config: ServerConfig): Promise<void> {
     }
   }
 
-  if (config.restrictionFile) {
-    const resolvedRestrictionPath = path.resolve(config.restrictionFile);
+  if (config.configFile) {
+    const resolvedConfigPath = path.resolve(config.configFile);
     try {
-      await fs.access(resolvedRestrictionPath, fsConstants.R_OK);
-      config.restrictionFile = resolvedRestrictionPath;
+      await fs.access(resolvedConfigPath, fsConstants.R_OK);
+      config.configFile = resolvedConfigPath;
     } catch (error) {
-      console.error('Field restriction file access error details:', error);
+      console.error('Configuration file access error details:', error);
       if (error instanceof Error) {
         const nodeError = error as NodeJS.ErrnoException;
         if (nodeError.code === 'EACCES') {
-          throw new Error(`Permission denied accessing restriction file: ${resolvedRestrictionPath}. Please check file permissions.`);
+          throw new Error(`Permission denied accessing config file: ${resolvedConfigPath}. Please check file permissions.`);
         } else if (nodeError.code === 'ENOENT') {
-          throw new Error(`Restriction file not found: ${resolvedRestrictionPath}. Please verify the file path.`);
+          throw new Error(`Config file not found: ${resolvedConfigPath}. Please verify the file path.`);
         } else {
-          throw new Error(`Unable to access restriction file: ${resolvedRestrictionPath}. Error: ${nodeError.message}`);
+          throw new Error(`Unable to access config file: ${resolvedConfigPath}. Error: ${nodeError.message}`);
         }
       } else {
-        throw new Error(`Unexpected error accessing restriction file: ${resolvedRestrictionPath}`);
+        throw new Error(`Unexpected error accessing config file: ${resolvedConfigPath}`);
       }
     }
   }
@@ -120,8 +127,11 @@ function parseArgs(): ServerConfig {
       case 'key-file':
         config.keyFilename = value;
         break;
-      case 'restriction-file':
-        config.restrictionFile = value;
+      case 'config-file':
+        config.configFile = value;
+        break;
+      case 'maximum-bytes-billed':
+        config.maximumBytesBilled = value;
         break;
       default:
         throw new Error(`Unknown argument: ${arg}`);
@@ -131,7 +141,7 @@ function parseArgs(): ServerConfig {
   if (!config.projectId) {
     throw new Error(
       "Missing required argument: --project-id\n" +
-      "Usage: mcp-server-bigquery --project-id <project-id> [--location <location>] [--key-file <path-to-key-file>]"
+      "Usage: mcp-server-bigquery --project-id <project-id> [--location <location>] [--key-file <path-to-key-file>] [--config-file <path-to-config-file>] [--maximum-bytes-billed <maximum-bytes>]"
     );
   }
 
@@ -156,7 +166,7 @@ let bigquery: BigQuery;
 let resourceBaseUrl: URL;
 
 type FieldRestrictionMap = Record<string, string[]>;
-let fieldRestrictions: FieldRestrictionMap = {};
+let bigqueryConfig: BigQueryConfig;
 
 // Aggregation functions that allow restricted columns when used as direct arguments.
 const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum", "min", "max"];
@@ -171,11 +181,11 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function loadFieldRestrictions(restrictionFile?: string): Promise<FieldRestrictionMap> {
-  const explicitPathProvided = Boolean(restrictionFile);
-  const resolvedPath = restrictionFile
-    ? path.resolve(restrictionFile)
-    : path.resolve(process.cwd(), 'prevented_fields.json');
+async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
+  const explicitPathProvided = Boolean(configFile);
+  const resolvedPath = configFile
+    ? path.resolve(configFile)
+    : path.resolve(process.cwd(), 'config.json');
 
   let fileContents: string;
 
@@ -185,23 +195,34 @@ async function loadFieldRestrictions(restrictionFile?: string): Promise<FieldRes
     const nodeError = error as NodeJS.ErrnoException;
     if (nodeError?.code === 'ENOENT') {
       if (explicitPathProvided) {
-        throw new Error(`Restriction file not found: ${resolvedPath}`);
+        throw new Error(`Config file not found: ${resolvedPath}`);
       }
-      console.error(`No restriction file found at ${resolvedPath}; proceeding without field restrictions.`);
-      return {};
+      throw new Error(`Config file not found at ${resolvedPath}. Please create a config.json file with maximumBytesBilled and preventedFields configuration.`);
     }
-    throw new Error(`Unable to read restriction file ${resolvedPath}: ${nodeError?.message ?? 'Unknown error'}`);
+    throw new Error(`Unable to read config file ${resolvedPath}: ${nodeError?.message ?? 'Unknown error'}`);
   }
 
   try {
     const parsed = JSON.parse(fileContents);
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('Field restriction file must be a JSON object mapping table names to arrays of column names.');
+      throw new Error('Config file must be a JSON object with maximumBytesBilled and preventedFields properties.');
+    }
+
+    const config = parsed as Record<string, unknown>;
+
+    // Validate maximumBytesBilled
+    if (!config.maximumBytesBilled || typeof config.maximumBytesBilled !== 'string') {
+      throw new Error('Config file must contain a maximumBytesBilled string property.');
+    }
+
+    // Validate preventedFields
+    if (!config.preventedFields || typeof config.preventedFields !== 'object' || Array.isArray(config.preventedFields)) {
+      throw new Error('Config file must contain a preventedFields object mapping table names to arrays of column names.');
     }
 
     const normalized: FieldRestrictionMap = {};
 
-    for (const [tableName, fields] of Object.entries(parsed as Record<string, unknown>)) {
+    for (const [tableName, fields] of Object.entries(config.preventedFields as Record<string, unknown>)) {
       if (!Array.isArray(fields) || fields.some((field) => typeof field !== 'string')) {
         throw new Error(`Invalid field list for table "${tableName}". Each table value must be an array of column name strings.`);
       }
@@ -209,11 +230,20 @@ async function loadFieldRestrictions(restrictionFile?: string): Promise<FieldRes
       normalized[tableName.toLowerCase()] = (fields as string[]).map((field) => field.toLowerCase());
     }
 
-    console.error(`Loaded field restrictions for ${Object.keys(normalized).length} tables from ${resolvedPath}`);
-    return normalized;
+    // Use CLI parameter if provided, otherwise use config file value
+    const finalMaximumBytesBilled = config.maximumBytesBilled || config.maximumBytesBilled as string;
+
+    const result: BigQueryConfig = {
+      maximumBytesBilled: finalMaximumBytesBilled,
+      preventedFields: normalized,
+    };
+
+    const source = config.maximumBytesBilled ? `CLI parameter` : `${resolvedPath}`;
+    console.error(`Using maximumBytesBilled=${result.maximumBytesBilled} from ${source}, field restrictions for ${Object.keys(normalized).length} tables from ${resolvedPath}`);
+    return result;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Field restriction file is not valid JSON');
+      throw new Error('Config file is not valid JSON');
     }
     throw error;
   }
@@ -454,7 +484,7 @@ try {
   
   console.error(`Initializing BigQuery with project ID: ${config.projectId} and location: ${config.location}`);
   
-  const bigqueryConfig: {
+  const bigqueryOptions: {
     projectId: string;
     keyFilename?: string;
   } = {
@@ -463,12 +493,12 @@ try {
   
   if (config.keyFilename) {
     console.error(`Using service account key file: ${config.keyFilename}`);
-    bigqueryConfig.keyFilename = config.keyFilename;
+    bigqueryOptions.keyFilename = config.keyFilename;
   }
   
-  bigquery = new BigQuery(bigqueryConfig);
+  bigquery = new BigQuery(bigqueryOptions);
   resourceBaseUrl = new URL(`bigquery://${config.projectId}`);
-  fieldRestrictions = await loadFieldRestrictions(config.restrictionFile);
+  bigqueryConfig = await loadConfiguration(config.configFile);
 } catch (error) {
   console.error('Initialization error:', error);
   process.exit(1);
@@ -557,11 +587,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             sql: { type: "string" },
-            maximumBytesBilled: {
-              type: "string",
-              description: "Maximum bytes billed (default: 1GB)",
-              optional: true,
-            }
           },
         },
       },
@@ -572,7 +597,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "query") {
     let sql = request.params.arguments?.sql as string;
-    const maximumBytesBilled = request.params.arguments?.maximumBytesBilled || "1000000000";
     
     // Validate read-only query
     const forbiddenPattern = /\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|MERGE|TRUNCATE|GRANT|REVOKE|EXECUTE|BEGIN|COMMIT|ROLLBACK)\b/i;
@@ -586,12 +610,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         sql = qualifyTablePath(sql, config.projectId);
       }
 
-      enforceFieldRestrictions(sql, fieldRestrictions);
+      enforceFieldRestrictions(sql, bigqueryConfig.preventedFields);
 
       const [rows] = await bigquery.query({
         query: sql,
         location: config.location,
-        maximumBytesBilled: maximumBytesBilled.toString(),
+        maximumBytesBilled: bigqueryConfig.maximumBytesBilled,
       });
 
       return {

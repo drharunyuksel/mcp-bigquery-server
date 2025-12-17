@@ -1,0 +1,27 @@
+{
+  "maximumBytesBilled": "10000000000",
+  "preventedFields": {
+    "enara_data.users": [
+      "salesforce_refresh_token",
+      "drchrono_access_token",
+      "fitbit_user_id",
+      "fitbit_scope",
+      "first_name",
+      "last_name",
+      "address",
+      "fullname",
+      "fitbit_access_token",
+      "auth_token",
+      "encrypted_password",
+      "drchrono_refresh_token",
+      "twitter_token",
+      "twitter_secret",
+      "salesforce_access_token",
+      "reset_password_token",
+      "phone"
+    ],
+    "enara_data_billing.rpm_compliance_snapshot": [
+      "patient_name"
+    ]
+  }
+}
