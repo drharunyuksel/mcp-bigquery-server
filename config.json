@@ -22,6 +22,11 @@
     ],
     "enara_data_billing.rpm_compliance_snapshot": [
       "patient_name"
+    ],
+    "enara_data_drchrono.drchrono_patients": [
+      "first_name",
+      "last_name",
+      "email"
     ]
   }
 }
