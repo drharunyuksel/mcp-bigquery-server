@@ -30,8 +30,8 @@ Here's all you need to do:
 - Run SQL queries by just asking questions in plain English
 - Access both tables and materialized views in your datasets
 - Explore dataset schemas with clear labeling of resource types (tables vs views)
-- Analyze data within safe limits (1GB query limit by default)
-- Keep your data secure (read-only access)
+- Analyze data within configurable safe limits (configured via config.json)
+- Keep your data secure (read-only access with field restrictions)
 
 ## Quick Start 🚀
 
@@ -115,17 +115,60 @@ If you prefer manual configuration or need more control:
 3. **Start chatting!** 
    Open Claude Desktop and start asking questions about your data.
 
-### Command Line Arguments
+### Configuration
+
+The server supports an optional `config.json` file for advanced configuration. Without a config file, the server uses safe defaults (1GB query limit, no field restrictions). Place the file in the same directory where you run the server or specify its path with `--config-file`.
+
+#### config.json Structure
+```json
+{
+  "maximumBytesBilled": "1000000000",
+  "preventedFields": {
+    "your_dataset.your_table": ["sensitive_column1", "sensitive_column2"]
+  }
+}
+```
+
+- `maximumBytesBilled`: Maximum bytes that can be billed for a query (default: "1000000000" for 1GB)
+- `preventedFields`: Object mapping table names to arrays of restricted column names
+
+#### Command Line Arguments
 
 The server accepts the following arguments:
 - `--project-id`: (Required) Your Google Cloud project ID
-- `--location`: (Optional) BigQuery location, defaults to 'us-central1'
+- `--location`: (Optional) BigQuery location, defaults to 'US'
 - `--key-file`: (Optional) Path to service account key JSON file
+- `--config-file`: (Optional) Path to configuration file, defaults to 'config.json'
+- `--maximum-bytes-billed`: (Optional) Override maximum bytes billed for queries, overrides config.json value
 
 Example using service account:
 ```bash
-npx @ergut/mcp-bigquery-server --project-id your-project-id --location europe-west1 --key-file /path/to/key.json
+npx @ergut/mcp-bigquery-server --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
 ```
+
+#### Sensitive Field Scanner
+
+The server includes an automated scanner that discovers sensitive columns (PII, PHI, secrets) across your BigQuery datasets by querying `INFORMATION_SCHEMA.COLUMNS`. Discovered fields are automatically added to `preventedFields` in your config.
+
+**Automatic scanning on startup:** When the server starts, it checks if the config file is stale (based on `sensitiveFieldScanFrequencyDays`) and runs the scan if needed. Set to `0` to disable auto-scanning.
+
+**Manual scanning via CLI:**
+```bash
+npm run scan-fields -- --project-id your-project-id --config-file ./config.json
+```
+
+**Scanner configuration in config.json:**
+```json
+{
+  "sensitiveFieldPatterns": [
+    "%first_name%", "%last_name%", "%email%", "%ssn%", "%date_of_birth%"
+  ],
+  "sensitiveFieldScanFrequencyDays": 1
+}
+```
+
+- `sensitiveFieldPatterns`: SQL LIKE patterns to match column names (defaults to a built-in set covering names, contacts, identity, insurance, and secrets)
+- `sensitiveFieldScanFrequencyDays`: Days between automatic scans (default: `1`, set `0` to disable)
 
 ### Permissions Needed
 
@@ -162,7 +205,11 @@ Then update your Claude Desktop config to point to your local build:
         "--location",
         "us-central1",
         "--key-file",
-        "/path/to/service-account-key.json"
+        "/path/to/service-account-key.json",
+        "--config-file",
+        "/path/to/config.json",
+        "--maximum-bytes-billed",
+        "2000000000"
       ]
     }
   }
@@ -173,8 +220,9 @@ Then update your Claude Desktop config to point to your local build:
 
 - MCP support is currently only available in Claude Desktop (developer preview)
 - Connections are limited to local MCP servers running on the same machine
-- Queries are read-only with a 1GB processing limit
+- Queries are read-only with configurable processing limits (set in config.json)
 - While both tables and views are supported, some complex view types might have limitations
+- A config.json file is optional; without one the server uses safe defaults
 
 ## Support & Resources 💬
 
