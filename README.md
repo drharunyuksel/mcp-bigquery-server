@@ -31,7 +31,9 @@ Here's all you need to do:
 - Access both tables and materialized views in your datasets
 - Explore dataset schemas with clear labeling of resource types (tables vs views)
 - Analyze data within configurable safe limits (configured via config.json)
-- Keep your data secure (read-only access with field restrictions)
+- **Protect sensitive data** — define field-level access restrictions to prevent AI agents from reading PII, PHI, financial data, and secrets. The agent receives clear guidance on how to reformulate queries using aggregates or `EXCEPT` clauses, so it remains useful without exposing individual records.
+- **Auto-discover sensitive fields** — automatically scan your entire BigQuery data warehouse for columns matching sensitive patterns (names, emails, SSNs, medical records, API keys, etc.) and add them to the restricted list. New tables and columns are protected automatically on each scan — no manual maintenance required.
+- **Fully configurable** — everything is driven by `config.json`. Add your own detection patterns to match your organization's naming conventions (e.g., `%guardian_name%`, `%beneficiary%`), adjust scan frequency, set billing limits, and define per-table field restrictions. The scanner picks up your custom patterns on the next run and automatically protects any matching columns across all datasets.
 
 ## Quick Start 🚀
 
@@ -117,24 +119,33 @@ If you prefer manual configuration or need more control:
 
 ### Configuration
 
-The server uses a `config.json` file for configuration. This file should be placed in the same directory where you run the server or specify its path with the `--config-file` argument.
+The server supports an optional `config.json` file for advanced configuration. Without a config file, the server uses safe defaults (1GB query limit, no field restrictions). Place the file in the same directory where you run the server or specify its path with `--config-file`.
 
 #### config.json Structure
 ```json
 {
   "maximumBytesBilled": "1000000000",
   "preventedFields": {
-    "your_dataset.your_table": ["sensitive_column1", "sensitive_column2"]
-  }
+    "healthcare.patients": ["first_name", "last_name", "ssn", "date_of_birth", "email"],
+    "billing.transactions": ["credit_card_number", "bank_account"]
+  },
+  "sensitiveFieldPatterns": [
+    "%first_name%", "%last_name%", "%email%",
+    "%ssn%", "%date_of_birth%", "%password%"
+  ],
+  "sensitiveFieldScanFrequencyDays": 1
 }
 ```
 
-- `maximumBytesBilled`: Maximum bytes that can be billed for a query (default: "1000000000" for 1GB)
-- `preventedFields`: Object mapping table names to arrays of restricted column names
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `maximumBytesBilled` | `"1000000000"` (1GB) | Maximum bytes billed per query |
+| `preventedFields` | `{}` | Table-to-columns mapping of restricted fields |
+| `sensitiveFieldPatterns` | Built-in set | SQL LIKE patterns for auto-discovery |
+| `sensitiveFieldScanFrequencyDays` | `1` | Days between auto-scans (`0` to disable) |
 
 #### Command Line Arguments
 
-The server accepts the following arguments:
 - `--project-id`: (Required) Your Google Cloud project ID
 - `--location`: (Optional) BigQuery location, defaults to 'US'
 - `--key-file`: (Optional) Path to service account key JSON file
@@ -145,6 +156,124 @@ Example using service account:
 ```bash
 npx @ergut/mcp-bigquery-server --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
 ```
+
+## Protecting Sensitive Data 🔒
+
+Data warehouses often contain highly sensitive information — patient records, social security numbers, financial data, personal contact details, and authentication secrets. When an AI agent has direct access to query your BigQuery warehouse, **there is no human in the loop to prevent it from reading sensitive columns**. A simple query like `SELECT * FROM patients` could expose thousands of PII/PHI records in a single response.
+
+This server gives administrators fine-grained control over which columns an AI agent can access, ensuring sensitive data stays protected while still allowing the AI to perform useful analytical queries on non-sensitive fields.
+
+### Field-Level Access Restrictions
+
+Define `preventedFields` in your config to block the AI agent from accessing specific columns:
+
+```json
+{
+  "preventedFields": {
+    "healthcare.patients": ["first_name", "last_name", "ssn", "date_of_birth", "email"],
+    "billing.transactions": ["credit_card_number", "bank_account"]
+  }
+}
+```
+
+**What happens when the AI agent tries to access a restricted field:**
+
+```sql
+SELECT first_name, last_name, diagnosis FROM healthcare.patients
+```
+
+The server blocks the query and returns a clear, instructive error:
+
+```
+Restricted fields detected for table "healthcare.patients" columns "first_name", "last_name".
+You can only use these columns inside ["count", "countif", "avg", "sum", "min", "max"]
+aggregate functions or exclude them with SELECT * EXCEPT (...).
+```
+
+The AI agent learns from this error and adjusts its queries automatically. It can still run analytical queries that don't expose individual sensitive values:
+
+```sql
+-- Allowed: aggregate functions don't expose individual values
+SELECT COUNT(first_name) AS patient_count, diagnosis
+FROM healthcare.patients
+GROUP BY diagnosis
+
+-- Allowed: explicitly excluding restricted fields
+SELECT * EXCEPT(first_name, last_name, ssn, date_of_birth, email)
+FROM healthcare.patients
+```
+
+**Query pattern reference:**
+
+| Query Pattern | Behavior |
+|---|---|
+| `SELECT restricted_col FROM table` | Blocked with error message |
+| `SELECT * FROM table` | Blocked (would expose restricted fields) |
+| `SELECT * EXCEPT(restricted_cols) FROM table` | Allowed |
+| `COUNT(restricted_col)`, `AVG(...)`, `SUM(...)`, `MIN(...)`, `MAX(...)` | Allowed (aggregates don't expose individual values) |
+| `SELECT non_restricted_col FROM table` | Allowed |
+
+**Server-side logging:** Every blocked query is logged on the server side, giving administrators visibility into what the AI agent attempted to access:
+```
+Query tool error: Error: Restricted fields detected for table "healthcare.patients" columns "first_name", "last_name".
+```
+
+### Automated Sensitive Field Scanner
+
+Manually listing every sensitive column across hundreds of tables is impractical. The server includes an automated scanner that discovers sensitive columns across **all** your BigQuery datasets by querying `INFORMATION_SCHEMA.COLUMNS` with configurable SQL LIKE patterns. Discovered fields are automatically added to `preventedFields` in your config.
+
+#### How It Works
+
+1. The scanner runs SQL LIKE pattern matching against all column names in your BigQuery project
+2. Columns matching patterns like `%first_name%`, `%ssn%`, `%email%` are identified as sensitive
+3. Discovered columns are merged into your config's `preventedFields`
+4. The merge is **additive-only** — manually added restrictions are never removed
+
+#### Auto-Scan on Server Startup
+
+When the MCP server starts, it checks if the config file is stale based on `sensitiveFieldScanFrequencyDays`. If stale, it automatically scans and updates the config:
+
+```
+Config is stale (scan frequency: 1 day(s)), running sensitive field scan...
+Scanning all datasets for sensitive fields...
+Found 1166 sensitive column(s) across 278 table(s)
+Scan complete: config updated with 278 tables.
+```
+
+This means **new tables with sensitive columns are automatically protected** without any manual configuration. As your data warehouse grows, the scanner keeps up.
+
+#### Manual Scan via CLI
+
+Run a scan on demand at any time:
+```bash
+npm run scan-fields -- --project-id your-project-id --config-file ./config.json
+```
+
+#### Custom Patterns for Your Organization
+
+The default patterns cover common naming conventions (names, emails, SSNs, dates of birth, medical record numbers, insurance IDs, passwords, API keys, etc.), but every organization has its own. Add custom patterns to match your schema:
+
+```json
+{
+  "sensitiveFieldPatterns": [
+    "%first_name%", "%last_name%", "%email%", "%ssn%",
+    "%date_of_birth%", "%password%", "%api_key%",
+    "%guardian_name%",
+    "%emergency_contact%",
+    "%beneficiary%",
+    "%next_of_kin%"
+  ]
+}
+```
+
+On the next auto-scan (or manual `npm run scan-fields`), the scanner picks up columns matching your new patterns and automatically adds them to `preventedFields`. As your data warehouse grows and new tables are added, any columns matching your patterns are **automatically protected** without manual intervention.
+
+#### Scanner Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `sensitiveFieldPatterns` | Built-in set covering names, contacts, identity, insurance, and secrets | SQL LIKE patterns to match against column names |
+| `sensitiveFieldScanFrequencyDays` | `1` (daily) | Days between automatic scans. Set `0` to disable auto-scanning. |
 
 ### Permissions Needed
 
@@ -198,7 +327,7 @@ Then update your Claude Desktop config to point to your local build:
 - Connections are limited to local MCP servers running on the same machine
 - Queries are read-only with configurable processing limits (set in config.json)
 - While both tables and views are supported, some complex view types might have limitations
-- A config.json file is required for the server to start
+- A config.json file is optional; without one the server uses safe defaults
 
 ## Support & Resources 💬
 

@@ -198,7 +198,12 @@ async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
       if (explicitPathProvided) {
         throw new Error(`Config file not found: ${resolvedPath}`);
       }
-      throw new Error(`Config file not found at ${resolvedPath}. Please create a config.json file with maximumBytesBilled and preventedFields configuration.`);
+      // No config file found and none explicitly requested — use defaults
+      console.error('No config.json found, using defaults (1GB query limit, no field restrictions).');
+      return {
+        maximumBytesBilled: '1000000000',
+        preventedFields: {},
+      };
     }
     throw new Error(`Unable to read config file ${resolvedPath}: ${nodeError?.message ?? 'Unknown error'}`);
   }
