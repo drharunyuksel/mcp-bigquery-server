@@ -281,11 +281,22 @@ function referencesSameTable(candidate: string, expected: string): boolean {
 }
 
 function extractSelectClause(sql: string): string {
-  const selectMatch = sql.match(/\bselect\b([\s\S]*?)\bfrom\b/);
-  if (!selectMatch) {
-    return '';
+  const clauses: string[] = [];
+
+  // Standard SQL: SELECT ... FROM
+  const standardMatch = sql.match(/\bselect\b([\s\S]*?)\bfrom\b/);
+  if (standardMatch) {
+    clauses.push(standardMatch[1]);
   }
-  return selectMatch[1];
+
+  // Pipe syntax: |> SELECT ... (terminated by next pipe operator, end of string, or semicolon)
+  const pipeSelectPattern = /\|>\s*select\b([\s\S]*?)(?=\|>|;|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pipeSelectPattern.exec(sql)) !== null) {
+    clauses.push(match[1]);
+  }
+
+  return clauses.join(' , ');
 }
 
 function parseExceptColumns(segment: string): { full: Set<string>; bare: Set<string> } {
