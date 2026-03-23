@@ -505,14 +505,18 @@ try {
   bigquery = new BigQuery(bigqueryOptions);
   resourceBaseUrl = new URL(`bigquery://${config.projectId}`);
 
-  // Run daily sensitive field scan if config is stale
+  // Run daily sensitive field scan only if a config file exists or was explicitly provided
   const configFilePath = config.configFile
     ? path.resolve(config.configFile)
     : path.resolve(process.cwd(), 'config.json');
   try {
+    await fs.access(configFilePath, fsConstants.R_OK);
     await runDailyScanIfNeeded(bigquery, configFilePath);
   } catch (error) {
-    console.error('Warning: daily sensitive field scan failed, using existing config.', error);
+    if (config.configFile) {
+      console.error('Warning: daily sensitive field scan failed, using existing config.', error);
+    }
+    // No config file and none requested — skip scan silently
   }
 
   bigqueryConfig = await loadConfiguration(config.configFile);
