@@ -133,6 +133,7 @@ build/
 
 config.json
 .claude/
+AGENTS.md
 gcp-oauth.keys.json
 .*-server-credentials.json
 
