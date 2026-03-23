@@ -170,7 +170,8 @@ type FieldRestrictionMap = Record<string, string[]>;
 let bigqueryConfig: BigQueryConfig;
 
 // Aggregation functions that allow restricted columns when used as direct arguments.
-const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum", "min", "max"];
+// MIN/MAX are excluded because they return actual individual values (e.g. MIN(name) leaks a real name).
+const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum"];
 
 interface StarUsage {
   qualifier?: string;
@@ -402,12 +403,26 @@ function starUsageCoversField(
   return false;
 }
 
+// Strip SQL comments and string literals so they don't trigger false positives
+// in field reference checks.
+function stripCommentsAndLiterals(sql: string): string {
+  return sql
+    // Remove single-line comments (-- ...)
+    .replace(/--[^\n]*/g, '')
+    // Remove multi-line comments (/* ... */)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    // Remove single-quoted string literals ('...')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+    // Remove double-quoted identifiers ("...")
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""');
+}
+
 function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap): void {
   if (!Object.keys(restrictions).length) {
     return;
   }
 
-  const normalizedSql = sql.replace(/`/g, '').toLowerCase();
+  const normalizedSql = stripCommentsAndLiterals(sql.replace(/`/g, '')).toLowerCase();
   const blockedColumnsByTable: Record<string, Set<string>> = {};
   const aliasToTableMap = buildTableAliasMap(normalizedSql);
   const selectClause = extractSelectClause(normalizedSql);
@@ -436,7 +451,17 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
       return referencesSameTable(resolved, tableName);
     });
 
+    // If there's no SELECT or AGGREGATE clause (e.g. FROM table |> LIMIT 10),
+    // all columns are returned implicitly — treat as SELECT * violation.
+    // AGGREGATE queries are safe since they only return aggregate results.
+    const hasNoSelectClause = !selectClause.trim()
+      && !/\|>\s*aggregate\b/.test(normalizedSql);
+
     const starViolation = ((): boolean => {
+      if (hasNoSelectClause) {
+        return true;
+      }
+
       if (!relevantStarUsages.length && !qualifiedStarPattern.test(normalizedSql) && !aliasStarDetected) {
         return false;
       }
@@ -465,8 +490,11 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
 
     for (const field of restrictedFields) {
       const fieldPattern = new RegExp(`\\b${escapeRegExp(field)}\\b`);
+      // Match aggregate functions containing the restricted field, including complex
+      // expressions like COUNTIF(field IS NOT NULL) or COUNT(DISTINCT field).
+      // Uses a non-greedy match for the closing paren to handle nested expressions.
       const aggregatePattern = new RegExp(
-        `\\b(?:${AGGREGATE_FUNCTIONS.join('|')})\\s*\\(\\s*(?:distinct\\s+)?(?:[\\w$]+\\.)*${escapeRegExp(field)}\\s*\\)`,
+        `\\b(?:${AGGREGATE_FUNCTIONS.join('|')})\\s*\\([^)]*\\b${escapeRegExp(field)}\\b[^)]*\\)`,
         'g',
       );
 
