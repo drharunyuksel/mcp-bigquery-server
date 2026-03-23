@@ -131,6 +131,7 @@ dist
 
 build/
 
+config.json
 gcp-oauth.keys.json
 .*-server-credentials.json
 

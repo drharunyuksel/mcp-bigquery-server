@@ -1,0 +1,14 @@
+{
+  "maximumBytesBilled": "10000000000",
+  "preventedFields": {
+    "dataset_name.table_name": [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "address",
+      "date_of_birth",
+      "ssn"
+    ]
+  }
+}
