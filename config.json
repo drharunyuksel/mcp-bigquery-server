@@ -1,36 +1,1729 @@
 {
   "maximumBytesBilled": "10000000000",
   "preventedFields": {
-    "enara_data.users": [
-      "salesforce_refresh_token",
-      "drchrono_access_token",
-      "fitbit_user_id",
-      "fitbit_scope",
-      "first_name",
-      "last_name",
-      "address",
-      "fullname",
-      "fitbit_access_token",
-      "auth_token",
-      "encrypted_password",
-      "drchrono_refresh_token",
-      "twitter_token",
-      "twitter_secret",
-      "salesforce_access_token",
-      "reset_password_token",
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.hint_all_memberships_with_core_data": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.hint_all_memberships_with_core_data_backup": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.hint_ended_memberships_with_future_appointments": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.members_lite_with_nearest_appointments": [
+      "email",
+      "patient_name",
       "phone"
     ],
-    "enara_data_billing.rpm_compliance_snapshot": [
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.members_lite_with_nearest_appointments_with_phase": [
+      "email",
+      "patient_name",
+      "phone"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.members_with_no_hint_membership_with_future_appointments": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_full_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.members_with_no_hint_membership_with_md_initial": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.members_with_pending_hint_membership_and_initial": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.memberships_with_appt_in_seven_days": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name",
+      "users_phone"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.memberships_with_balance": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.schedulings_view": [
+      "patient_email"
+    ],
+    "Active_Member_Data_Consistency_And_Hint_Activation_Dashboard.test_hint_all_memberships_with_core_data_and_email": [
+      "hint_patient_email",
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_id_email_match",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "acuity_and_scheduling_behaviour_dashboard.acuity_data_with_clinic_for_activity_dashboard": [
+      "clinic_name_from_crm_by_email",
+      "clinic_name_from_crm_by_phone",
+      "crm_id_from_crm_by_email",
+      "crm_id_from_crm_by_phone",
+      "email",
+      "email_from_crm_by_email",
+      "email_from_users_by_email",
+      "phone",
+      "phone_from_crm_by_phone",
+      "phone_from_users_by_phone",
+      "user_id_from_users_by_email",
+      "user_id_from_users_by_phone"
+    ],
+    "acuity_and_scheduling_behaviour_dashboard.acuity_data_with_clinic_for_unsync_appointments": [
+      "clinic_name_from_crm_by_email",
+      "clinic_name_from_crm_by_phone",
+      "crm_id_from_crm_by_email",
+      "crm_id_from_crm_by_phone",
+      "email",
+      "email_from_crm_by_email",
+      "email_from_users_by_email",
+      "phone",
+      "phone_from_crm_by_phone",
+      "phone_from_users_by_phone",
+      "user_id_from_users_by_email",
+      "user_id_from_users_by_phone"
+    ],
+    "acuity_and_scheduling_behaviour_dashboard.wrong_user_scheduling": [
+      "clinic_name_from_crm_by_email",
+      "clinic_name_from_crm_by_phone",
+      "crm_id_from_crm_by_email",
+      "crm_id_from_crm_by_phone",
+      "email",
+      "email_from_crm_by_email",
+      "email_from_users_by_email",
+      "phone",
+      "phone_from_crm_by_phone",
+      "phone_from_users_by_phone",
+      "user_id_from_users_by_email",
+      "user_id_from_users_by_phone"
+    ],
+    "Apero_Data_Rami.adjusted_membership_payments": [
+      "Patient_Name"
+    ],
+    "Apero_Data_Rami.agg_Mankato_line_apps": [
+      "Patient_First_Name",
+      "Patient_Last_Name"
+    ],
+    "Apero_Data_Rami.agg_Mankato_line_apps_wRVU_Enarauserid": [
+      "Patient_First_Name",
+      "Patient_Last_Name"
+    ],
+    "Apero_Data_Rami.Apero_Raw_Data": [
+      "billing_provider_npi",
+      "patient_name",
+      "rendering_provider_first_name",
+      "rendering_provider_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.consolidated_hint_data": [
+      "Patient_Name"
+    ],
+    "Apero_Data_Rami.detailed_payments_view": [
+      "patient_name",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.Hint_Billed_Revenue": [
+      "Patient Name"
+    ],
+    "Apero_Data_Rami.Hint_Coupon_All_Time": [
       "patient_name"
     ],
-    "enara_data_drchrono.drchrono_patients": [
+    "Apero_Data_Rami.Hint_Member_Status_Monthly": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "Apero_Data_Rami.Hint_Payment_Transactions": [
+      "Patient Name"
+    ],
+    "Apero_Data_Rami.invoice_view": [
+      "billing_provider_npi",
+      "patient_name",
+      "rendering_provider_first_name",
+      "rendering_provider_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.invoice_view_rvu": [
+      "billing_provider_npi",
+      "patient_name",
+      "rendering_provider_first_name",
+      "rendering_provider_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.Line_Item_View": [
+      "billing_provider_npi",
+      "patient_name",
+      "rendering_provider_first_name",
+      "rendering_provider_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.Line_Item_View_Rvu": [
+      "billing_provider_npi",
+      "patient_name",
+      "rendering_provider_first_name",
+      "rendering_provider_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_last_name",
+      "subscriber_member_id"
+    ],
+    "Apero_Data_Rami.Mankato_Enara_Match2": [
+      "Patient_First_Name",
+      "Patient_Last_Name"
+    ],
+    "Apero_Data_Rami.Mankato_Raw_Data": [
+      "Patient First Name",
+      "Patient Last Name"
+    ],
+    "Apero_Data_Rami.rpm_test": [
+      "patient_name"
+    ],
+    "Apero_Data_Rami.rpm_test_augmented": [
+      "patient_name"
+    ],
+    "appointment_analysis_dashboard.provider_appointments_with_panel_size": [
+      "email",
+      "phone"
+    ],
+    "Appointments_To_Reschedule_Dashboard.appointments_to_reschedule": [
+      "email",
+      "phone"
+    ],
+    "clinical_management_dashboard.af_panel_size_aapmpm": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_management_dashboard.af_panel_size_appointments_last_30_days": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_management_dashboard.food_picture_review_metrics": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_management_dashboard.member_care_team_with_appointments": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "clinical_management_dashboard.member_care_team_with_appointments_test": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "clinical_management_dashboard.member_care_team_with_appointments-test2": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "clinical_management_dashboard.panel_size_aapmpm": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_management_dashboard.panel_size_aapmpm_test": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_management_dashboard.panel_size_appointments_last_30_days": [
+      "care_team_provider_full_name"
+    ],
+    "clinical_outcomes_report.all_members_view": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "clinical_outcomes_report.dashboard_dataset_historical_view": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "clinical_outcomes_report.dashboard_dataset_view": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "clinical_outcomes_report.historic_start_dates": [
+      "full_name"
+    ],
+    "clinical_outcomes_report.partner_clinic_outcomes_tracking_light": [
+      "full_name"
+    ],
+    "clinical_outcomes_report.report_members": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "dev_engagement_spreadsheet.engagement_spreadsheet": [
+      "patient_email",
+      "patient_name",
+      "patient_phone"
+    ],
+    "dev_engagement_spreadsheet.engagement_spreadsheet_with_rules": [
+      "patient_email",
+      "patient_name",
+      "patient_phone"
+    ],
+    "dev_financial_dashboard.APERO_line_items": [
+      "apero_invoice_patient_name"
+    ],
+    "dev_financial_dashboard.appointments_section": [
+      "email",
+      "phone"
+    ],
+    "dev_financial_dashboard.BASE_memberships_referralcount_billableappointments": [
+      "apero_i_patient_name",
+      "full_name",
+      "insurance_id"
+    ],
+    "dev_financial_dashboard.MemberAllData": [
+      "full_name",
+      "insurance_id"
+    ],
+    "dev_financial_dashboard.membership_monthly_snapshots": [
+      "full_name",
+      "insurance_id"
+    ],
+    "dev_hy.available_providers": [
+      "full_name"
+    ],
+    "dev_icd10_code_analysis.patients_with_diabetes_ICD10_codes": [
+      "email",
+      "patient_name"
+    ],
+    "dev_js_apex_weight_loss_audit.apex_monthly_vitals": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name",
+      "member_id"
+    ],
+    "dev_js.rpm_historical_trends": [
+      "patient_name"
+    ],
+    "dev_js.rpm_patient_current_snapshot": [
+      "care_team_provider_full_name",
+      "patient_dob",
+      "patient_name"
+    ],
+    "dev_js.rpm_patient_detail_export": [
+      "patient_dob",
+      "patient_name"
+    ],
+    "dev_js.snapshots": [
+      "patient_dob",
+      "patient_name"
+    ],
+    "drchrono_claim_export_validations.drchrono_appointment_status": [
+      "drchrono_core_patient_name"
+    ],
+    "drchrono_claim_export_validations.drchrono_appointment_status_provider_name": [
+      "drchrono_core_patient_name"
+    ],
+    "Eligibility_Dashboard_Dataset.elegibility-task-dataset": [
+      "task_first_name",
+      "task_last_name",
+      "task_member_id",
+      "task_owner_first_name",
+      "task_owner_last_name",
+      "task_request_insurance_id",
+      "task_secondary_insurance_member_id"
+    ],
+    "Eligibility_Dashboard_Dataset.elegibility-task-dataset-v2": [
+      "task_first_name",
+      "task_full_name",
+      "task_last_name",
+      "task_lead_owner_full_name",
+      "task_member_id",
+      "task_owner_full_name",
+      "task_requested_insurance_id"
+    ],
+    "Eligibility_Dashboard_Dataset.insurance-plans-elegibility-dataset": [
+      "insurance_plans_created_by_first_name",
+      "insurance_plans_created_by_last_name",
+      "insurance_plans_updated_by_first_name",
+      "insurance_plans_updated_by_last_name"
+    ],
+    "Eligibility_Dashboard_Dataset.pVerify_response_matching": [
+      "task_first_name",
+      "task_full_name",
+      "task_last_name",
+      "task_lead_owner_full_name",
+      "task_member_id",
+      "task_owner_full_name",
+      "task_requested_insurance_id"
+    ],
+    "enara_dashboard_datasets.appointment_analysis_and_cx_workarounds-dataset": [
+      "email",
+      "phone"
+    ],
+    "enara_dashboard_datasets.pvq_behavioral_health_topics_pivoted": [
+      "email",
       "first_name",
       "last_name",
+      "phone"
+    ],
+    "enara_dashboard_datasets.pvq_behavioral_health_topics_pivoted_tbl": [
+      "email",
+      "first_name",
+      "last_name",
+      "phone"
+    ],
+    "enara_dashboard_datasets.pvq_responses_flattened": [
+      "email",
+      "first_name",
+      "last_name",
+      "phone"
+    ],
+    "enara_dashboard_datasets.rpm_opportunities_last_30_snapshots": [
+      "care_team_provider_full_name",
+      "patient_dob",
+      "patient_name"
+    ],
+    "enara_dashboard_datasets.rpm_opportunities_patient_current_snapshot": [
+      "care_team_provider_full_name",
+      "patient_dob",
+      "patient_name"
+    ],
+    "enara_data_apero.apero_claims": [
+      "patient_first_name",
+      "patient_last_name",
+      "rendering_provider_npi",
+      "subscriber_dob",
+      "subscriber_member_id",
+      "supervising_provider_npi"
+    ],
+    "enara_data_apero.apero_coverages": [
+      "address_1",
+      "address_2",
+      "subscriber_dob",
+      "subscriber_first_name",
+      "subscriber_id",
+      "subscriber_last_name",
+      "use_patient_address",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_customers": [
+      "address_1",
+      "address_2",
+      "address_recipient_line",
+      "email",
+      "first_name",
+      "last_name",
+      "phone_number_office",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_facilities": [
+      "address_1",
+      "address_2",
+      "npi",
+      "pay_to_address",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_patients": [
+      "address_1",
+      "address_2",
+      "contact_email",
+      "dob",
+      "email",
+      "first_name",
+      "last_name",
+      "phone_number_home",
+      "phone_number_mobile",
+      "phone_number_office",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_payers": [
+      "address_1",
+      "address_2",
+      "phone_number",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_providers": [
+      "address_1",
+      "address_2",
+      "email",
+      "first_name",
+      "last_name",
+      "npi",
+      "npi_type",
+      "phone_number_mobile",
+      "phone_number_office",
+      "zip_code"
+    ],
+    "enara_data_apero.apero_remit_claims": [
+      "patient_first_name",
+      "patient_last_name",
+      "subscriber_id"
+    ],
+    "enara_data_appointments_api.member_communication_statuses": [
+      "core_member_id",
+      "email_opted_out",
+      "email_opted_out_at"
+    ],
+    "enara_data_appointments_api.tracking_numbers": [
+      "enabled_for_voicemail"
+    ],
+    "enara_data_billing.billing_members": [
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "member_id",
+      "outside_mrn"
+    ],
+    "enara_data_billing.processes": [
+      "last_modified_by_user_full_name"
+    ],
+    "enara_data_billing.rpm_compliance_snapshot": [
+      "patient_dob",
+      "patient_name"
+    ],
+    "enara_data_billing.rpm_note_exports": [
+      "created_by_user_full_name"
+    ],
+    "enara_data_billing.rpm_notes": [
+      "last_modified_by_user_full_name"
+    ],
+    "enara_data_dev_js.clinics": [
+      "access_token_provider_id",
+      "address",
+      "address_info",
+      "default_provider_email",
+      "email",
+      "phone",
+      "zip_code"
+    ],
+    "enara_data_dev_js.users": [
+      "address",
+      "auth_token",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "first_name",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "insurance_id",
+      "last_name",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "enara_data_drchrono.all_lab_results_with_users": [
+      "patient_name"
+    ],
+    "enara_data_drchrono.appointments": [
+      "primary_insurance_id_number",
+      "secondary_insurance_id_number"
+    ],
+    "enara_data_drchrono.appointments_raw_staging": [
+      "primary_insurance_id_number",
+      "secondary_insurance_id_number"
+    ],
+    "enara_data_drchrono.drchrono_patients": [
+      "address",
+      "cell_phone",
+      "date_of_birth",
+      "email",
+      "emergency_contact_phone",
+      "employer_address",
+      "employer_zip_code",
+      "first_name",
+      "home_phone",
+      "last_name",
+      "office_phone",
+      "primary_responsible_party_address",
+      "responsible_party_email",
+      "responsible_party_phone",
+      "social_security_number",
+      "zip_code"
+    ],
+    "enara_data_drchrono.drchrono_patients_copy": [
+      "address",
+      "cell_phone",
+      "date_of_birth",
+      "email",
+      "emergency_contact_phone",
+      "employer_address",
+      "employer_zip_code",
+      "first_name",
+      "home_phone",
+      "last_name",
+      "office_phone",
+      "primary_responsible_party_address",
+      "responsible_party_email",
+      "responsible_party_phone",
+      "social_security_number",
+      "zip_code"
+    ],
+    "enara_data_drchrono.drchrono_patients_dev_temp": [
+      "address",
+      "cell_phone",
+      "date_of_birth",
+      "email",
+      "emergency_contact_phone",
+      "employer_address",
+      "employer_zip_code",
+      "first_name",
+      "home_phone",
+      "last_name",
+      "office_phone",
+      "primary_responsible_party_address",
+      "responsible_party_email",
+      "responsible_party_phone",
+      "social_security_number",
+      "zip_code"
+    ],
+    "enara_data_drchrono.matching_enaraID_for_mankato_patients": [
+      "MRN_inDrchrono"
+    ],
+    "enara_data_drchrono.provider_list": [
+      "cell_phone",
+      "email",
+      "first_name",
+      "group_npi_number",
+      "home_phone",
+      "last_name",
+      "npi_number",
+      "office_phone",
+      "zipcode"
+    ],
+    "enara_data_hint.charges": [
+      "patient_email",
+      "patient_first_name",
+      "patient_last_name",
+      "practitioner_email",
+      "practitioner_npi_number"
+    ],
+    "enara_data_hint.hint_memberships_users_clinics": [
+      "hint_patient_name",
+      "users_dob",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "enara_data_hint.hint_patients": [
+      "address_city",
+      "address_country",
+      "address_line1",
+      "address_line2",
+      "address_state",
+      "address_zip",
+      "chosen_first_name",
+      "chosen_last_name",
+      "dob",
+      "email",
+      "first_name",
+      "health_insurance_member_id",
+      "last_name",
+      "phones"
+    ],
+    "enara_data_mankato_revenue_detail_files.mankato_revenue_detail_files": [
+      "Patient_First_Name",
+      "Patient_Last_Name"
+    ],
+    "enara_data_ops_spreadsheets_datasets.audit_appointment_count": [
+      "fullname"
+    ],
+    "enara_data_ops_spreadsheets_datasets.initial_appointments_last_60_days": [
+      "patient_email",
+      "patient_full_name"
+    ],
+    "enara_data_ops_spreadsheets_datasets.mankato_mrn": [
+      "DOB",
+      "first_name",
+      "last_name",
+      "mankato_mrn"
+    ],
+    "enara_data_ops_spreadsheets_datasets.upcoming_fu_dia_appointments": [
+      "fullname"
+    ],
+    "enara_data_stripe.stripe_charges": [
+      "receipt_email"
+    ],
+    "enara_data_stripe.stripe_customers": [
+      "address",
+      "email",
+      "phone"
+    ],
+    "enara_data_stripe.stripe_enara_partner_accounts": [
       "email"
+    ],
+    "enara_data_stripe.stripe_payment_intents": [
+      "client_secret",
+      "receipt_email"
+    ],
+    "enara_data_stripe.stripe_payment_intents_copy": [
+      "client_secret",
+      "receipt_email"
+    ],
+    "enara_data.acuity_data": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_historical_temp": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_temp": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_with_clinic": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_with_clinic_v2": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_with_clinic_v3": [
+      "email",
+      "phone"
+    ],
+    "enara_data.acuity_data_with_clinic_v4": [
+      "email",
+      "phone"
+    ],
+    "enara_data.clinics": [
+      "access_token_provider_id",
+      "address",
+      "address_info",
+      "default_provider_email",
+      "email",
+      "phone",
+      "zip_code"
+    ],
+    "enara_data.elegibility-task-dataset": [
+      "task_first_name",
+      "task_last_name",
+      "task_member_id",
+      "task_owner_first_name",
+      "task_owner_last_name",
+      "task_request_insurance_id",
+      "task_secondary_insurance_member_id"
+    ],
+    "enara_data.encounter_table": [
+      "first_name",
+      "last_name"
+    ],
+    "enara_data.insurance-plans-elegibility-dataset": [
+      "insurance_plans_created_by_first_name",
+      "insurance_plans_created_by_last_name",
+      "insurance_plans_updated_by_first_name",
+      "insurance_plans_updated_by_last_name"
+    ],
+    "enara_data.lead": [
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "member_id",
+      "phone_number",
+      "request_insurance_id",
+      "secondary_insurance_member_id"
+    ],
+    "enara_data.leads_raw": [
+      "account_address",
+      "account_phone",
+      "donotemail",
+      "emailaddress",
+      "lastoptinemailsentdate",
+      "mx_agent_email",
+      "mx_date_of_birth",
+      "mx_insurance_id",
+      "mx_outside_mrn",
+      "owner_associatedphonenumbers",
+      "owner_emailaddress",
+      "owner_fullname",
+      "owneridemailaddress",
+      "phone",
+      "sourceipaddress"
+    ],
+    "enara_data.referrals_dynamo": [
+      "patientFullName",
+      "patientPhone1",
+      "patientPhone2",
+      "patientPhone3"
+    ],
+    "enara_data.schedulings": [
+      "patient_email"
+    ],
+    "enara_data.schedulings_with_history_record": [
+      "patient_email"
+    ],
+    "enara_data.users": [
+      "address",
+      "auth_token",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "first_name",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_scope",
+      "fitbit_token_expires_at",
+      "fitbit_user_id",
+      "fullname",
+      "insurance_id",
+      "last_name",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "enara_data.users_copy_2026_02_13": [
+      "address",
+      "auth_token",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "first_name",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "last_name",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "enara_data.users_temp": [
+      "address",
+      "auth_token",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "first_name",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "insurance_id",
+      "last_name",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "enara_hub_dev.organizations": [
+      "npi"
+    ],
+    "enara_hub_dev.practitioner": [
+      "npi",
+      "ssn"
+    ],
+    "enara_hub_mockup.organizations": [
+      "npi"
+    ],
+    "enara_hub_mockup.patients": [
+      "date_of_birth",
+      "first_name",
+      "last_name"
+    ],
+    "enara_hub_mockup.practitioners": [
+      "birth_date",
+      "first_name",
+      "last_name",
+      "npi"
+    ],
+    "enara_hub_production.organizations": [
+      "npi"
+    ],
+    "enara_hub_production.organizations_copy": [
+      "npi"
+    ],
+    "enara_hub_production.patients": [
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "mrn"
+    ],
+    "enara_hub_production.practitioners": [
+      "birth_date",
+      "first_name",
+      "last_name",
+      "npi"
+    ],
+    "enara_hub_production.practitioners_copy": [
+      "birth_date",
+      "first_name",
+      "last_name",
+      "npi"
+    ],
+    "enara_hub_test.organizations": [
+      "npi"
+    ],
+    "enara_hub_test.patients": [
+      "date_of_birth",
+      "first_name",
+      "last_name"
+    ],
+    "enara_hub_test.practitioners": [
+      "birth_date",
+      "first_name",
+      "last_name",
+      "npi"
+    ],
+    "financial_dashboard.af_APERO_line_items": [
+      "apero_invoice_patient_name"
+    ],
+    "financial_dashboard.af_BASE_memberships_referralcount_billableappointments": [
+      "apero_i_patient_name",
+      "full_name",
+      "insurance_id"
+    ],
+    "financial_dashboard.af_hint_all_memberships_with_core_data": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "financial_dashboard.af_hint_member_status_monthly": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "financial_dashboard.af_membership_monthly_snapshots": [
+      "full_name",
+      "insurance_id"
+    ],
+    "financial_dashboard.agg_acuity_data_w_encounterid": [
+      "first_name",
+      "last_name"
+    ],
+    "financial_dashboard.agg_line_item_apps_with_encounter": [
+      "claim_supervising_npi",
+      "patient_first_name",
+      "patient_last_name"
+    ],
+    "financial_dashboard.BASE_memberships_referralcount_billableappointments": [
+      "full_name",
+      "insurance_id"
+    ],
+    "financial_dashboard.encounter_level_claims": [
+      "patient_first_name",
+      "patient_last_name"
+    ],
+    "financial_dashboard.invoice_summary": [
+      "ap_cl_subscriber_dob",
+      "ap_cl_subscriber_member_id",
+      "ap_pt_first_name",
+      "ap_pt_last_name"
+    ],
+    "financial_dashboard.line_item_apps": [
+      "claim_subscriber_dob",
+      "claim_subscriber_member_id",
+      "claim_supervising_npi",
+      "patient_first_name",
+      "patient_last_name",
+      "patient_name"
+    ],
+    "financial_dashboard.line_item_apps_w_rvu_user_clinic_data": [
+      "claim_subscriber_dob",
+      "claim_subscriber_member_id",
+      "claim_supervising_npi",
+      "patient_first_name",
+      "patient_last_name",
+      "patient_name"
+    ],
+    "financial_dashboard.line_item_apps_w_user_clinic_data": [
+      "claim_subscriber_dob",
+      "claim_subscriber_member_id",
+      "claim_supervising_npi",
+      "patient_first_name",
+      "patient_last_name",
+      "patient_name"
+    ],
+    "financial_dashboard.line_item_apps2": [
+      "claim_subscriber_dob",
+      "claim_subscriber_member_id",
+      "claim_supervising_npi",
+      "patient_first_name",
+      "patient_last_name",
+      "patient_name"
+    ],
+    "financial_dashboard.Mankato_bililng_files": [
+      "billing_provider_first_name",
+      "billing_provider_last_name",
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "mankato_medical_record_number"
+    ],
+    "financial_dashboard.Mankato_billing_files": [
+      "billing_provider_first_name",
+      "billing_provider_last_name",
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "mankato_medical_record_number"
     ],
     "financial_dashboard.Mankato_raw_data": [
       "Patient First Name",
       "Patient Last Name"
+    ],
+    "financial_dashboard.Mankato_raw_data_copy": [
+      "Patient First Name",
+      "Patient Last Name"
+    ],
+    "financial_dashboard.Mankato_Unpaid_Claims": [
+      "carrier_email",
+      "carrier_phone",
+      "carrier_phone_ext",
+      "guarantor_first_name",
+      "guarantor_last_name",
+      "patient_dob",
+      "patient_first_name",
+      "patient_last_name"
+    ],
+    "financial_dashboard.member_invoices": [
+      "first_name",
+      "last_name"
+    ],
+    "financial_dashboard.membership_monthly_snapshots": [
+      "full_name",
+      "insurance_id"
+    ],
+    "financial_dashboard.memberships_dev": [
+      "full_name",
+      "insurance_id"
+    ],
+    "financial_dashboard.patient_level_denials": [
+      "new_rendering_npi",
+      "new_subscriber_id",
+      "new_supervising_npi",
+      "old_rendering_npi",
+      "old_subscriber_id",
+      "old_supervising_npi",
+      "patient_name",
+      "rendering_npi_change_count",
+      "subscriber_id_change_count",
+      "supervising_npi_change_count"
+    ],
+    "financial_dashboard.view_BASE_memberships_referralcount_billableappointments": [
+      "full_name",
+      "insurance_id"
+    ],
+    "forward_schema.addresses": [
+      "postal_code"
+    ],
+    "forward_schema.facilities": [
+      "address_id",
+      "address_line1",
+      "address_line2",
+      "npi",
+      "phone",
+      "postal_code"
+    ],
+    "forward_schema.organizations": [
+      "address_id",
+      "address_line1",
+      "address_line2",
+      "npi",
+      "postal_code"
+    ],
+    "forward_schema.practitioners": [
+      "birth_date",
+      "first_name",
+      "last_name",
+      "npi",
+      "ssn"
+    ],
+    "gc_eligibility_list.group_classes_eligible_users": [
+      "email"
+    ],
+    "growth_dashboard.hint_membership_status_monthly": [
+      "hint_patient_name",
+      "users_dob",
+      "users_email",
+      "users_first_name",
+      "users_insurance_id",
+      "users_last_name"
+    ],
+    "hit_list_dashboards.dia_apt_analysis": [
+      "email",
+      "fullname"
+    ],
+    "hit_list_dashboards.dia_apt_analysis_v2": [
+      "email",
+      "fullname",
+      "ns_full_name"
+    ],
+    "hit_list_dashboards.pending_cancellation_list": [
+      "patient_email",
+      "patient_name"
+    ],
+    "hit_list_dashboards.pending_list_journey": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.available_providers": [
+      "full_name"
+    ],
+    "insomnia_report.clinic_forecast": [
+      "care_team_provider_full_name"
+    ],
+    "insomnia_report.clinic_forecast_NS_ES": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "insomnia_report.clinic_forecast_NS_ES_V2": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "insomnia_report.forecast_report": [
+      "care_team_provider_full_name"
+    ],
+    "insomnia_report.forecast_report_2": [
+      "care_team_provider_full_name"
+    ],
+    "insomnia_report.forecast_report_2_NS_ES": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "insomnia_report.forecast_report_2_NS_ES_V2": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "insomnia_report.group_classes_eligible_users": [
+      "email"
+    ],
+    "insomnia_report.limit_dates": [
+      "care_team_provider_full_name"
+    ],
+    "insomnia_report.next_weekly_dia_list": [
+      "Date_of_Birth_DRC",
+      "Medical_Record_Number_Mankato_Only",
+      "Patient_Name"
+    ],
+    "insomnia_report.pending_cancellation_list": [
+      "patient_email",
+      "patient_name"
+    ],
+    "insomnia_report.pending_cancellation_list_2": [
+      "patient_email",
+      "patient_name"
+    ],
+    "insomnia_report.pending_cancellation_list_with_future_valid": [
+      "patient_email",
+      "patient_name"
+    ],
+    "insomnia_report.pending_cancellation_list_with_future_valid_2": [
+      "patient_email",
+      "patient_name"
+    ],
+    "insomnia_report.pending_list": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.pending_list_2": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.pending_list_dia": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.pending_list_p2": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.pending_list_raw": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.pending_list_raw_2": [
+      "care_team_provider_full_name",
+      "email",
+      "full_name",
+      "phone"
+    ],
+    "insomnia_report.test_date_of_birth": [
+      "Date of Birth"
+    ],
+    "insomnia_report.test_patient_name": [
+      "Patient Name"
+    ],
+    "insomnia_report.weekly_apt_list": [
+      "date_of_birth",
+      "full_name",
+      "MRN_inDrchrono"
+    ],
+    "insomnia_report.weekly_dia_list": [
+      "Date_of_Birth_DRC",
+      "Medical_Record_Number_Mankato_Only",
+      "Patient_Name"
+    ],
+    "lead_conversion_rate_prediction.leads_conversion_predictions": [
+      "lead_crm_zip_code"
+    ],
+    "lead_conversion_rate_prediction.sanitized_leads_analytics_view": [
+      "mx_date_of_birth"
+    ],
+    "lead_conversion_rate_prediction.training_data": [
+      "lead_dob"
+    ],
+    "lead_conversion_rate_prediction.training_data_v2": [
+      "lead_clinic_zip_code",
+      "lead_crm_zip_code",
+      "lead_dob",
+      "lead_zip_code"
+    ],
+    "membership_and_profile_status_by_months_end.membership_and_profile_status_by_months_end_view": [
+      "full_name"
+    ],
+    "ms_activity_dashboard_dataset.acuity_data_with_clinic_original": [
+      "email",
+      "phone"
+    ],
+    "ms_activity_dashboard_dataset.acuity_data_with_clinic_v2": [
+      "email",
+      "phone"
+    ],
+    "ms_activity_dashboard_dataset.acuity_data_with_clinic_v3": [
+      "clinic_name_from_crm_by_email",
+      "clinic_name_from_crm_by_phone",
+      "crm_id_from_crm_by_email",
+      "crm_id_from_crm_by_phone",
+      "email",
+      "phone",
+      "user_id_from_users_by_email",
+      "user_id_from_users_by_phone"
+    ],
+    "ms_activity_dashboard_dataset.appointments": [
+      "email",
+      "phone"
+    ],
+    "ms_activity_dashboard_dataset.appointments_test1": [
+      "email",
+      "phone"
+    ],
+    "one_view._mms_stage2_demographics": [
+      "birth_date",
+      "email",
+      "first_name",
+      "last_name",
+      "phone"
+    ],
+    "one_view.acuity_provider_cost": [
+      "acuity_email",
+      "birth_date",
+      "core_insurance_id",
+      "first_name",
+      "fullname_dob",
+      "last_name",
+      "users_email"
+    ],
+    "one_view.acuity_unbilled_prediction": [
+      "birth_date",
+      "first_name",
+      "last_name"
+    ],
+    "one_view.apero_line_apps": [
+      "birth_date",
+      "claim_subscriber_dob",
+      "claim_subscriber_member_id",
+      "claim_supervising_npi",
+      "core_insurance_id",
+      "first_name",
+      "fullname_dob",
+      "last_name"
+    ],
+    "one_view.apero_line_apps_wRVU": [
+      "birth_date",
+      "claim_subscriber_dob",
+      "claim_supervising_npi",
+      "core_insurance_id",
+      "first_name",
+      "fullname",
+      "fullname_dob",
+      "last_name",
+      "subscriber_member_id"
+    ],
+    "one_view.clinical_outcomes_monthly": [
+      "birth_date",
+      "first_name",
+      "last_name"
+    ],
+    "one_view.coder_worklist": [
+      "doctor_email",
+      "fullname_dob"
+    ],
+    "one_view.drchrono_note_status": [
+      "birth_date",
+      "doctor_email_base",
+      "first_name",
+      "fullname_dob",
+      "last_name"
+    ],
+    "one_view.encounter_pipeline_view": [
+      "first_name",
+      "last_name"
+    ],
+    "one_view.encounters_appointments": [
+      "birth_date",
+      "first_name",
+      "fullname_dob",
+      "insurance_id",
+      "last_name"
+    ],
+    "one_view.hint_invoices_accrual_adjustment": [
+      "birth_date",
+      "first_name",
+      "fullname_dob",
+      "last_name",
+      "owner_email",
+      "owner_phone"
+    ],
+    "one_view.invoice_level_view": [
+      "birth_date",
+      "fullname_dob",
+      "patient_name"
+    ],
+    "one_view.line_item_view": [
+      "birth_date",
+      "fullname_dob",
+      "patient_name"
+    ],
+    "one_view.line_item_view_with_expected": [
+      "birth_date",
+      "fullname_dob",
+      "patient_name"
+    ],
+    "one_view.line_item_view_with_unbilled": [
+      "birth_date",
+      "fullname_dob",
+      "patient_name"
+    ],
+    "one_view.mankato_csv_uploads": [
+      "billing_provider_first_name",
+      "billing_provider_last_name",
+      "date_of_birth",
+      "first_name",
+      "last_name",
+      "mankato_medical_record_number"
+    ],
+    "one_view.mankato_line_apps": [
+      "patient_first_name",
+      "patient_last_name"
+    ],
+    "one_view.Mankato_line_apps_wRVU": [
+      "birth_date",
+      "core_insurance_id",
+      "first_name",
+      "fullname_dob",
+      "last_name"
+    ],
+    "one_view.mankato_line_items": [
+      "patient_first_name",
+      "patient_last_name"
+    ],
+    "one_view.mankato_unified_rvu": [
+      "birth_date",
+      "first_name",
+      "last_name"
+    ],
+    "one_view.merged_line_apps_wRVU": [
+      "birth_date",
+      "claim_subscriber_dob",
+      "claim_supervising_npi",
+      "core_insurance_id",
+      "first_name",
+      "fullname",
+      "fullname_dob",
+      "last_name",
+      "subscriber_member_id"
+    ],
+    "one_view.monthly_member_snapshot": [
+      "birth_date",
+      "email",
+      "first_name",
+      "last_name",
+      "phone"
+    ],
+    "one_view.monthly_membership_coupon_accrual": [
+      "dob",
+      "first_name",
+      "fullname_dob",
+      "last_name",
+      "owner_email",
+      "owner_phone"
+    ],
+    "one_view.monthly_membership_coupon_accrual_v2": [
+      "dob",
+      "first_name",
+      "fullname_dob",
+      "last_name",
+      "owner_email",
+      "owner_phone"
+    ],
+    "one_view.patient_icd10_rankings_basic": [
+      "patient_name"
+    ],
+    "one_view.patient_icd10_rankings_with_cpt": [
+      "patient_name"
+    ],
+    "one_view.provider_monthly_anniversary_worklist": [
+      "first_name",
+      "last_name"
+    ],
+    "one_view.provider_patient_worklist": [
+      "first_name",
+      "last_name"
+    ],
+    "one_view.provider_weekly_summary": [
+      "provider_email"
+    ],
+    "one_view.unbilled_line_items": [
+      "birth_date",
+      "fullname_dob",
+      "patient_name"
+    ],
+    "one_view.unsigned_notes_worklist": [
+      "email_target",
+      "patient_name",
+      "provider_email"
+    ],
+    "one_view.user_program_encounter_years": [
+      "fullname_dob"
+    ],
+    "parsed_Metriport_html.related_persons": [
+      "addresses"
+    ],
+    "Provider_availability_Forecast_Breakdown.current_panel_size_by_month": [
+      "care_team_provider_full_name"
+    ],
+    "Provider_availability_Forecast_Breakdown.current_panel_size_by_month_bak": [
+      "care_team_provider_full_name"
+    ],
+    "provider_availability_test.dates_df": [
+      "full_name"
+    ],
+    "provider_availability.available_providers": [
+      "full_name"
+    ],
+    "provider_availability.clinic_forecast_NS_ES": [
+      "care_team_provider_full_name"
+    ],
+    "provider_availability.clinic_forecast_NS_ES_dev": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "provider_availability.dates_df": [
+      "full_name"
+    ],
+    "provider_availability.forecast_report_2_NS_ES": [
+      "care_team_provider_full_name"
+    ],
+    "provider_availability.forecast_report_2_NS_ES_dev": [
+      "address",
+      "auth_token",
+      "care_team_provider_full_name",
+      "drchrono_access_token",
+      "drchrono_refresh_token",
+      "drchrono_token_expires_at",
+      "email",
+      "encrypted_password",
+      "fitbit_access_token",
+      "fitbit_refresh_token",
+      "fitbit_token_expires_at",
+      "fullname",
+      "insurance_id",
+      "outside_mrn",
+      "phone",
+      "reset_password_sent_at",
+      "reset_password_token",
+      "salesforce_access_token",
+      "salesforce_refresh_token",
+      "twitter_secret",
+      "twitter_token",
+      "zip_code"
+    ],
+    "provider_panel_size.all_active_members_with_care_team_view": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "provider_panel_size.all_active_members_with_care_team_view_with_last_md_visit": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "provider_panel_size.dashboard_view": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "provider_panel_size.dashboard_view_test": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "provider_panel_size.member_care_team_snapshots": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "provider_panel_size.member_care_team_snapshots-2024-07-17T15_40_42": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "provider_panel_size.member_care_team_view": [
+      "care_team_provider_full_name",
+      "user_full_name"
+    ],
+    "provider_panel_size.panel_size_per_month_by_calendar_id": [
+      "care_team_provider_full_name"
+    ],
+    "provider_panel_size.provider_appointments": [
+      "care_team_es_full_name",
+      "care_team_md_full_name",
+      "care_team_ns_full_name",
+      "full_name"
+    ],
+    "provider_panel_size.provider_names_roles": [
+      "care_team_provider_full_name"
+    ],
+    "provider_utilization.provider_utilization_dia_list": [
+      "email",
+      "fullname"
+    ],
+    "video_call_dashboard.video_call_dashboard_view": [
+      "patient_email"
+    ],
+    "weekly_referral_dashboard.next_weekly_all_list": [
+      "date_of_birth",
+      "full_name",
+      "MRN_inDrchrono"
+    ],
+    "weekly_referral_dashboard.next_weekly_all_list_with_md": [
+      "date_of_birth",
+      "full_name",
+      "md_full_name",
+      "MRN_inDrchrono"
+    ],
+    "weekly_referral_dashboard.next_weekly_dia_list": [
+      "Date_of_Birth_DRC",
+      "Medical_Record_Number_Mankato_Only",
+      "Patient_Name"
+    ],
+    "weekly_referral_dashboard.weekly_all_list": [
+      "date_of_birth",
+      "full_name",
+      "MRN_inDrchrono"
+    ],
+    "weekly_referral_dashboard.weekly_all_list_with_md": [
+      "date_of_birth",
+      "full_name",
+      "md_full_name",
+      "MRN_inDrchrono"
+    ],
+    "weekly_referral_dashboard.weekly_apt_list": [
+      "date_of_birth",
+      "full_name",
+      "MRN_inDrchrono"
+    ],
+    "weekly_referral_dashboard.weekly_dia_list": [
+      "Date_of_Birth_DRC",
+      "Medical_Record_Number_Mankato_Only",
+      "Patient_Name"
+    ],
+    "weekly_rev_view.looker_ar_aging": [
+      "patient_name"
+    ],
+    "weekly_rev_view.looker_qa_issues": [
+      "patient_name"
     ]
   }
 }

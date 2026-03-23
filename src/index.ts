@@ -12,6 +12,7 @@ import { BigQuery } from '@google-cloud/bigquery';
 
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
+import { runDailyScanIfNeeded } from './sensitive-field-scanner.js';
 
 // Define configuration interface
 interface ServerConfig {
@@ -498,6 +499,17 @@ try {
   
   bigquery = new BigQuery(bigqueryOptions);
   resourceBaseUrl = new URL(`bigquery://${config.projectId}`);
+
+  // Run daily sensitive field scan if config is stale
+  const configFilePath = config.configFile
+    ? path.resolve(config.configFile)
+    : path.resolve(process.cwd(), 'config.json');
+  try {
+    await runDailyScanIfNeeded(bigquery, configFilePath);
+  } catch (error) {
+    console.error('Warning: daily sensitive field scan failed, using existing config.', error);
+  }
+
   bigqueryConfig = await loadConfiguration(config.configFile);
 } catch (error) {
   console.error('Initialization error:', error);
