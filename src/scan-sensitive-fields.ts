@@ -3,7 +3,7 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { scanSensitiveFields, mergeFields } from './sensitive-field-scanner.js';
+import { scanSensitiveFields, mergeFields, DEFAULT_SENSITIVE_PATTERNS } from './sensitive-field-scanner.js';
 
 // --- Interfaces ---
 
@@ -107,8 +107,13 @@ async function main() {
     }
   }
 
+  // Read patterns from config, fall back to defaults
+  const patterns = Array.isArray(existingConfig.sensitiveFieldPatterns)
+    ? existingConfig.sensitiveFieldPatterns as string[]
+    : DEFAULT_SENSITIVE_PATTERNS;
+
   // Scan BigQuery
-  const sensitiveColumns = await scanSensitiveFields(bigquery);
+  const sensitiveColumns = await scanSensitiveFields(bigquery, patterns);
 
   // Merge and write
   const mergedFields = mergeFields(existingConfig.preventedFields || {}, sensitiveColumns);

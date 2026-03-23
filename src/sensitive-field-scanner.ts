@@ -7,7 +7,7 @@ export interface SensitiveColumn {
   column_name: string;
 }
 
-export const SENSITIVE_PATTERNS: string[] = [
+export const DEFAULT_SENSITIVE_PATTERNS: string[] = [
   // Names
   '%first_name%', '%last_name%', '%full_name%', '%fullname%',
   '%patient_name%', '%member_name%',
@@ -25,8 +25,11 @@ export const SENSITIVE_PATTERNS: string[] = [
   '%access_key%', '%api_key%', '%credential%',
 ];
 
-export async function scanSensitiveFields(bigquery: BigQuery): Promise<SensitiveColumn[]> {
-  const likeConditions = SENSITIVE_PATTERNS
+export async function scanSensitiveFields(
+  bigquery: BigQuery,
+  patterns: string[]
+): Promise<SensitiveColumn[]> {
+  const likeConditions = patterns
     .map(p => `LOWER(column_name) LIKE '${p}'`)
     .join('\n   OR ');
 
@@ -93,32 +96,18 @@ export function mergeFields(
   return sorted;
 }
 
-function isStale(mtime: Date): boolean {
-  const now = new Date();
-  return (
-    mtime.getFullYear() !== now.getFullYear() ||
-    mtime.getMonth() !== now.getMonth() ||
-    mtime.getDate() !== now.getDate()
-  );
+function isStale(mtime: Date, frequencyDays: number): boolean {
+  if (frequencyDays <= 0) return false;
+  const elapsedMs = Date.now() - mtime.getTime();
+  const frequencyMs = frequencyDays * 24 * 60 * 60 * 1000;
+  return elapsedMs >= frequencyMs;
 }
 
 export async function runDailyScanIfNeeded(
   bigquery: BigQuery,
   configPath: string
 ): Promise<boolean> {
-  try {
-    const stat = await fs.stat(configPath);
-    if (!isStale(stat.mtime)) {
-      console.error('Config was already updated today, skipping sensitive field scan.');
-      return false;
-    }
-  } catch {
-    // File doesn't exist or can't be read — proceed with scan
-  }
-
-  console.error('Config is stale, running daily sensitive field scan...');
-
-  let existingPreventedFields: Record<string, string[]> = {};
+  // Read config to get frequency and patterns
   let existingConfig: Record<string, unknown> = {
     maximumBytesBilled: '10000000000',
     preventedFields: {},
@@ -127,17 +116,39 @@ export async function runDailyScanIfNeeded(
   try {
     const raw = await fs.readFile(configPath, 'utf-8');
     existingConfig = JSON.parse(raw);
-    existingPreventedFields = (existingConfig.preventedFields ?? {}) as Record<string, string[]>;
   } catch {
     // Use defaults
   }
 
-  const discovered = await scanSensitiveFields(bigquery);
+  const frequencyDays = typeof existingConfig.sensitiveFieldScanFrequencyDays === 'number'
+    ? existingConfig.sensitiveFieldScanFrequencyDays
+    : 1;
+
+  const patterns = Array.isArray(existingConfig.sensitiveFieldPatterns)
+    ? existingConfig.sensitiveFieldPatterns as string[]
+    : DEFAULT_SENSITIVE_PATTERNS;
+
+  // Check staleness
+  try {
+    const stat = await fs.stat(configPath);
+    if (!isStale(stat.mtime, frequencyDays)) {
+      console.error(`Config is fresh (scan frequency: ${frequencyDays} day(s)), skipping sensitive field scan.`);
+      return false;
+    }
+  } catch {
+    // File doesn't exist — proceed with scan
+  }
+
+  console.error(`Config is stale (scan frequency: ${frequencyDays} day(s)), running sensitive field scan...`);
+
+  const existingPreventedFields = (existingConfig.preventedFields ?? {}) as Record<string, string[]>;
+
+  const discovered = await scanSensitiveFields(bigquery, patterns);
   const merged = mergeFields(existingPreventedFields, discovered);
 
   const updatedConfig = { ...existingConfig, preventedFields: merged };
   await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2) + '\n', 'utf-8');
-  console.error(`Daily scan complete: config updated with ${Object.keys(merged).length} tables.`);
+  console.error(`Scan complete: config updated with ${Object.keys(merged).length} tables.`);
 
   return true;
 }
