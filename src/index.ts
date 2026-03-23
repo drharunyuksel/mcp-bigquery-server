@@ -470,7 +470,10 @@ function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap
         'g',
       );
 
-      const sqlWithoutAggregatedUsage = normalizedSql.replace(aggregatePattern, '');
+      // Remove aggregate usages and EXCEPT clauses before checking for direct field references
+      const sqlWithoutAggregatedUsage = normalizedSql
+        .replace(aggregatePattern, '')
+        .replace(/\bexcept\s*\([^)]*\)/g, '');
 
       if (fieldPattern.test(sqlWithoutAggregatedUsage)) {
         if (!blockedColumnsByTable[tableName]) {
