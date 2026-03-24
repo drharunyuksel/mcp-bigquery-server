@@ -152,7 +152,7 @@ The server supports an optional `config.json` file for advanced configuration. W
 
 Example using service account:
 ```bash
-npx @ergut/mcp-bigquery-server --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
+node /path/to/your/clone/mcp-bigquery-server/dist/index.js --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
 ```
 
 ## Protecting Sensitive Data 🔒
