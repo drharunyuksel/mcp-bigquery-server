@@ -337,19 +337,10 @@ Then update your Claude Desktop config to point to your local build:
 
 MIT License - See [LICENSE](LICENSE) file for details.
 
-## Author ✍️ 
+## Author ✍️
 
-Salih Ergüt
+Originally created by [Salih Ergüt](https://github.com/ergut). Forked and extended with security features by [Harun Yüksel](https://github.com/drharunyuksel).
 
-## Sponsorship
-
-This project is proudly sponsored by:
-
-<div align="center">
-  <a href="https://www.oredata.com">
-    <img src="assets/oredata-logo-nobg.png" alt="OREDATA" width="300"/>
-  </a>
-</div>
 
 ## Version History 📋
 
