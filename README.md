@@ -1,5 +1,7 @@
 # BigQuery MCP Server
-[![smithery badge](https://smithery.ai/badge/@ergut/mcp-bigquery-server)](https://smithery.ai/protocol/@ergut/mcp-bigquery-server)
+
+> **This is a fork of [ergut/mcp-bigquery-server](https://github.com/ergut/mcp-bigquery-server) with additional security features:** field-level access restrictions, an automated sensitive field scanner, and centralized billing controls. A PR is open upstream — until it's merged, use this fork to get these features.
+
 <div align="center">
   <img src="assets/mcp-bigquery-server-logo.png" alt="BigQuery MCP Server Logo" width="400"/>
 </div>
@@ -41,81 +43,77 @@ Here's all you need to do:
 - Node.js 14 or higher
 - Google Cloud project with BigQuery enabled
 - Either Google Cloud CLI installed or a service account key file
-- Claude Desktop (currently the only supported LLM interface)
+- Any MCP-compatible AI client (Claude Desktop, Cursor, Windsurf, etc.)
 
-### Option 1: Quick Install via Smithery (Recommended)
-To install BigQuery MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@ergut/mcp-bigquery-server), run this command in your terminal:
+> **Note:** The Smithery install and `npx @ergut/mcp-bigquery-server` commands install the **original upstream package** and will not include the security features in this fork. Use the setup below to get field restrictions and the sensitive field scanner.
+
+### Step 1: Clone and build this fork
 
 ```bash
-npx @smithery/cli install @ergut/mcp-bigquery-server --client claude
+git clone https://github.com/drharunyuksel/mcp-bigquery-server
+cd mcp-bigquery-server
+npm install
+npm run build
 ```
-The installer will prompt you for:
 
-- Your Google Cloud project ID
-- BigQuery location (defaults to us-central1)
+### Step 2: Authenticate with Google Cloud (choose one method)
 
-Once configured, Smithery will automatically update your Claude Desktop configuration and restart the application.
+- Using Google Cloud CLI (great for development):
+  ```bash
+  gcloud auth application-default login
+  ```
+- Using a service account (recommended for production):
+  ```bash
+  # Save your service account key file and use --key-file parameter
+  # Never commit your service account key to version control
+  ```
 
-### Option 2: Manual Setup
-If you prefer manual configuration or need more control:
+### Step 3: Add to your Claude Desktop config
 
-1. **Authenticate with Google Cloud** (choose one method):
-   - Using Google Cloud CLI (great for development):
-     ```bash
-     gcloud auth application-default login
-     ```
-   - Using a service account (recommended for production):
-     ```bash
-     # Save your service account key file and use --key-file parameter
-     # Remember to keep your service account key file secure and never commit it to version control
-     ```
+Add this to your `claude_desktop_config.json`, pointing to your local build:
 
-2. **Add to your Claude Desktop config**
-   Add this to your `claude_desktop_config.json`:
+- Basic configuration:
+  ```json
+  {
+    "mcpServers": {
+      "bigquery": {
+        "command": "node",
+        "args": [
+          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
+          "--project-id",
+          "your-project-id",
+          "--location",
+          "us-central1"
+        ]
+      }
+    }
+  }
+  ```
 
-   - Basic configuration:
-     ```json
-     {
-       "mcpServers": {
-         "bigquery": {
-           "command": "npx",
-           "args": [
-             "-y",
-             "@ergut/mcp-bigquery-server",
-             "--project-id",
-             "your-project-id",
-             "--location",
-             "us-central1"
-           ]
-         }
-       }
-     }
-     ```
+- With service account and config file:
+  ```json
+  {
+    "mcpServers": {
+      "bigquery": {
+        "command": "node",
+        "args": [
+          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
+          "--project-id",
+          "your-project-id",
+          "--location",
+          "us-central1",
+          "--key-file",
+          "/path/to/service-account-key.json",
+          "--config-file",
+          "/path/to/config.json"
+        ]
+      }
+    }
+  }
+  ```
 
-   - With service account:
-     ```json
-     {
-       "mcpServers": {
-         "bigquery": {
-           "command": "npx",
-           "args": [
-             "-y",
-             "@ergut/mcp-bigquery-server",
-             "--project-id",
-             "your-project-id",
-             "--location",
-             "us-central1",
-             "--key-file",
-             "/path/to/service-account-key.json"
-           ]
-         }
-       }
-     }
-     ```
-     
-
-3. **Start chatting!** 
-   Open Claude Desktop and start asking questions about your data.
+### Step 4: Start chatting!
+Open Claude Desktop and start asking questions about your data.
 
 ### Configuration
 
@@ -289,7 +287,7 @@ Want to customize or contribute? Here's how to set it up locally:
 
 ```bash
 # Clone and install
-git clone https://github.com/ergut/mcp-bigquery-server
+git clone https://github.com/drharunyuksel/mcp-bigquery-server
 cd mcp-bigquery-server
 npm install
 
@@ -323,7 +321,7 @@ Then update your Claude Desktop config to point to your local build:
 
 ## Current Limitations ⚠️
 
-- MCP support is currently only available in Claude Desktop (developer preview)
+- Works with any MCP-compatible AI client (Claude Desktop, Cursor, Windsurf, and others)
 - Connections are limited to local MCP servers running on the same machine
 - Queries are read-only with configurable processing limits (set in config.json)
 - While both tables and views are supported, some complex view types might have limitations
