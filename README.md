@@ -329,9 +329,9 @@ Then update your Claude Desktop config to point to your local build:
 
 ## Support & Resources 💬
 
-- 🐛 [Report issues](https://github.com/ergut/mcp-bigquery-server/issues)
-- 💡 [Feature requests](https://github.com/ergut/mcp-bigquery-server/issues)
-- 📖 [Documentation](https://github.com/ergut/mcp-bigquery-server)
+- 🐛 [Report issues](https://github.com/drharunyuksel/mcp-bigquery-server/issues)
+- 💡 [Feature requests](https://github.com/drharunyuksel/mcp-bigquery-server/issues)
+- 📖 [Documentation](https://github.com/drharunyuksel/mcp-bigquery-server)
 
 ## License 📝
 
