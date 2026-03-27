@@ -128,9 +128,9 @@ If you handle sensitive data or need field-level access restrictions:
        }
      }
      ```
+     
 
-
-3. **Start chatting!**
+3. **Start chatting!** 
    Open Claude Desktop and start asking questions about your data.
 
 ### Configuration
@@ -374,7 +374,7 @@ Then update your Claude Desktop config to point to your local build:
 
 MIT License - See [LICENSE](LICENSE) file for details.
 
-## Author ✍️
+## Author ✍️ 
 
 Salih Ergüt
 
