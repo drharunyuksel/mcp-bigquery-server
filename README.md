@@ -1,7 +1,5 @@
 # BigQuery MCP Server
-
-> **This is a fork of [ergut/mcp-bigquery-server](https://github.com/ergut/mcp-bigquery-server) with additional security features:** field-level access restrictions, an automated sensitive field scanner, and centralized billing controls. A PR is open upstream — until it's merged, use this fork to get these features.
-
+[![smithery badge](https://smithery.ai/badge/@ergut/mcp-bigquery-server)](https://smithery.ai/protocol/@ergut/mcp-bigquery-server)
 <div align="center">
   <img src="assets/mcp-bigquery-server-logo.png" alt="BigQuery MCP Server Logo" width="400"/>
 </div>
@@ -37,83 +35,103 @@ Here's all you need to do:
 - **Auto-discover sensitive fields** — automatically scan your entire BigQuery data warehouse for columns matching sensitive patterns (names, emails, SSNs, medical records, API keys, etc.) and add them to the restricted list. New tables and columns are protected automatically on each scan — no manual maintenance required.
 - **Fully configurable** — everything is driven by `config.json`. Add your own detection patterns to match your organization's naming conventions (e.g., `%guardian_name%`, `%beneficiary%`), adjust scan frequency, set billing limits, and define per-table field restrictions. The scanner picks up your custom patterns on the next run and automatically protects any matching columns across all datasets.
 
+## Which Setup Is Right for You?
+
+| | Simple Mode | Protected Mode |
+|---|---|---|
+| **Use when** | Personal projects, non-sensitive data | PHI, PII, financial data, HIPAA-regulated environments |
+| **Install** | `npx` or Smithery — no local setup needed | `npx` with `--config-file`, or clone and run locally |
+| **Field restrictions** | None | Define `preventedFields` to block sensitive columns |
+| **Auto-scanner** | Not available | Discovers sensitive columns across all datasets automatically |
+| **Setup** | [Option 1](#option-1-quick-install-via-smithery-recommended) below | [Option 2](#option-2-manual-setup) below |
+
+**Why local deployment matters for sensitive data:** LLM inference happens in the cloud. When an AI agent queries BigQuery, the results are sent to the LLM provider's servers (Anthropic, OpenAI, etc.) for processing — they leave your network. BigQuery IAM controls who can *reach* your data; field restrictions control what the *AI agent surfaces into LLM responses*. These are different protection boundaries. Configuring `preventedFields` ensures PHI and PII never enter the LLM conversation context, regardless of how many queries the agent runs autonomously.
+
 ## Quick Start 🚀
 
 ### Prerequisites
 - Node.js 14 or higher
 - Google Cloud project with BigQuery enabled
 - Either Google Cloud CLI installed or a service account key file
-- Any MCP-compatible AI client (Claude Desktop, Cursor, Windsurf, etc.)
+- Claude Desktop (currently the only supported LLM interface)
 
-> **Note:** The Smithery install and `npx @ergut/mcp-bigquery-server` commands install the **original upstream package** and will not include the security features in this fork. Use the setup below to get field restrictions and the sensitive field scanner.
-
-### Step 1: Clone and build this fork
+### Option 1: Quick Install via Smithery (Recommended — Simple Mode)
+To install BigQuery MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@ergut/mcp-bigquery-server), run this command in your terminal:
 
 ```bash
-git clone https://github.com/drharunyuksel/mcp-bigquery-server
-cd mcp-bigquery-server
-npm install
-npm run build
+npx @smithery/cli install @ergut/mcp-bigquery-server --client claude
 ```
+The installer will prompt you for:
 
-### Step 2: Authenticate with Google Cloud (choose one method)
+- Your Google Cloud project ID
+- BigQuery location (defaults to us-central1)
 
-- Using Google Cloud CLI (great for development):
-  ```bash
-  gcloud auth application-default login
-  ```
-- Using a service account (recommended for production):
-  ```bash
-  # Save your service account key file and use --key-file parameter
-  # Never commit your service account key to version control
-  ```
+Once configured, Smithery will automatically update your Claude Desktop configuration and restart the application.
 
-### Step 3: Add to your Claude Desktop config
+### Option 2: Manual Setup (Protected Mode — for sensitive data)
+If you handle sensitive data or need field-level access restrictions:
 
-Add this to your `claude_desktop_config.json`, pointing to your local build:
+1. **Authenticate with Google Cloud** (choose one method):
+   - Using Google Cloud CLI (great for development):
+     ```bash
+     gcloud auth application-default login
+     ```
+   - Using a service account (recommended for production):
+     ```bash
+     # Save your service account key file and use --key-file parameter
+     # Remember to keep your service account key file secure and never commit it to version control
+     ```
 
-- Basic configuration:
-  ```json
-  {
-    "mcpServers": {
-      "bigquery": {
-        "command": "node",
-        "args": [
-          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
-          "--project-id",
-          "your-project-id",
-          "--location",
-          "us-central1"
-        ]
-      }
-    }
-  }
-  ```
+2. **Add to your Claude Desktop config**
+   Add this to your `claude_desktop_config.json`:
 
-- With service account and config file:
-  ```json
-  {
-    "mcpServers": {
-      "bigquery": {
-        "command": "node",
-        "args": [
-          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
-          "--project-id",
-          "your-project-id",
-          "--location",
-          "us-central1",
-          "--key-file",
-          "/path/to/service-account-key.json",
-          "--config-file",
-          "/path/to/config.json"
-        ]
-      }
-    }
-  }
-  ```
+   - Basic configuration with config file:
+     ```json
+     {
+       "mcpServers": {
+         "bigquery": {
+           "command": "npx",
+           "args": [
+             "-y",
+             "@ergut/mcp-bigquery-server",
+             "--project-id",
+             "your-project-id",
+             "--location",
+             "us-central1",
+             "--config-file",
+             "/path/to/config.json"
+           ]
+         }
+       }
+     }
+     ```
 
-### Step 4: Start chatting!
-Open Claude Desktop and start asking questions about your data.
+   - With service account and config file:
+     ```json
+     {
+       "mcpServers": {
+         "bigquery": {
+           "command": "npx",
+           "args": [
+             "-y",
+             "@ergut/mcp-bigquery-server",
+             "--project-id",
+             "your-project-id",
+             "--location",
+             "us-central1",
+             "--key-file",
+             "/path/to/service-account-key.json",
+             "--config-file",
+             "/path/to/config.json"
+           ]
+         }
+       }
+     }
+     ```
+
+
+3. **Start chatting!**
+   Open Claude Desktop and start asking questions about your data.
 
 ### Configuration
 
@@ -152,7 +170,7 @@ The server supports an optional `config.json` file for advanced configuration. W
 
 Example using service account:
 ```bash
-node /path/to/your/clone/mcp-bigquery-server/dist/index.js --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
+npx @ergut/mcp-bigquery-server --project-id your-project-id --location europe-west1 --key-file /path/to/key.json --config-file /path/to/config.json --maximum-bytes-billed 2000000000
 ```
 
 ## Protecting Sensitive Data 🔒
@@ -287,7 +305,7 @@ Want to customize or contribute? Here's how to set it up locally:
 
 ```bash
 # Clone and install
-git clone https://github.com/drharunyuksel/mcp-bigquery-server
+git clone https://github.com/ergut/mcp-bigquery-server
 cd mcp-bigquery-server
 npm install
 
@@ -321,7 +339,7 @@ Then update your Claude Desktop config to point to your local build:
 
 ## Current Limitations ⚠️
 
-- Works with any MCP-compatible AI client (Claude Desktop, Cursor, Windsurf, and others)
+- MCP support is currently only available in Claude Desktop (developer preview)
 - Connections are limited to local MCP servers running on the same machine
 - Queries are read-only with configurable processing limits (set in config.json)
 - While both tables and views are supported, some complex view types might have limitations
@@ -329,9 +347,9 @@ Then update your Claude Desktop config to point to your local build:
 
 ## Support & Resources 💬
 
-- 🐛 [Report issues](https://github.com/drharunyuksel/mcp-bigquery-server/issues)
-- 💡 [Feature requests](https://github.com/drharunyuksel/mcp-bigquery-server/issues)
-- 📖 [Documentation](https://github.com/drharunyuksel/mcp-bigquery-server)
+- 🐛 [Report issues](https://github.com/ergut/mcp-bigquery-server/issues)
+- 💡 [Feature requests](https://github.com/ergut/mcp-bigquery-server/issues)
+- 📖 [Documentation](https://github.com/ergut/mcp-bigquery-server)
 
 ## License 📝
 
@@ -339,8 +357,17 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ## Author ✍️
 
-Originally created by [Salih Ergüt](https://github.com/ergut). Forked and extended with security features by [Harun Yüksel](https://github.com/drharunyuksel).
+Salih Ergüt
 
+## Sponsorship
+
+This project is proudly sponsored by:
+
+<div align="center">
+  <a href="https://www.oredata.com">
+    <img src="assets/oredata-logo-nobg.png" alt="OREDATA" width="300"/>
+  </a>
+</div>
 
 ## Version History 📋
 
