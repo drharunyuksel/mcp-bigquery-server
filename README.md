@@ -40,7 +40,7 @@ Here's all you need to do:
 | | Simple Mode | Protected Mode |
 |---|---|---|
 | **Use when** | Personal projects, non-sensitive data | PHI, PII, financial data, HIPAA-regulated environments |
-| **Install** | `npx` or Smithery — no local setup needed | `npx` with `--config-file`, or clone and run locally |
+| **Install** | `npx` or Smithery — no local setup needed | Clone this fork and run locally with a `config.json` |
 | **Field restrictions** | None | Define `preventedFields` to block sensitive columns |
 | **Auto-scanner** | Not available | Discovers sensitive columns across all datasets automatically |
 | **Setup** | [Option 1](#option-1-quick-install-via-smithery-recommended) below | [Option 2](#option-2-manual-setup) below |
@@ -71,6 +71,8 @@ Once configured, Smithery will automatically update your Claude Desktop configur
 ### Option 2: Manual Setup (Protected Mode — for sensitive data)
 If you handle sensitive data or need field-level access restrictions:
 
+> **Note:** The `npx @ergut/mcp-bigquery-server` command installs the published upstream package, which does not yet include Protected Mode. Until [this PR](https://github.com/ergut/mcp-bigquery-server/pull/14) is merged and a new version is published, use the local build below.
+
 1. **Authenticate with Google Cloud** (choose one method):
    - Using Google Cloud CLI (great for development):
      ```bash
@@ -82,7 +84,14 @@ If you handle sensitive data or need field-level access restrictions:
      # Remember to keep your service account key file secure and never commit it to version control
      ```
 
-2. **Add to your Claude Desktop config**
+2. **Clone this fork and build locally:**
+   ```bash
+   git clone https://github.com/drharunyuksel/mcp-bigquery-server
+   cd mcp-bigquery-server
+   npm install && npm run build
+   ```
+
+3. **Add to your Claude Desktop config**
    Add this to your `claude_desktop_config.json`:
 
    - Basic configuration with config file:
@@ -90,10 +99,9 @@ If you handle sensitive data or need field-level access restrictions:
      {
        "mcpServers": {
          "bigquery": {
-           "command": "npx",
+           "command": "node",
            "args": [
-             "-y",
-             "@ergut/mcp-bigquery-server",
+             "/path/to/mcp-bigquery-server/dist/index.js",
              "--project-id",
              "your-project-id",
              "--location",
@@ -111,10 +119,9 @@ If you handle sensitive data or need field-level access restrictions:
      {
        "mcpServers": {
          "bigquery": {
-           "command": "npx",
+           "command": "node",
            "args": [
-             "-y",
-             "@ergut/mcp-bigquery-server",
+             "/path/to/mcp-bigquery-server/dist/index.js",
              "--project-id",
              "your-project-id",
              "--location",
@@ -130,7 +137,7 @@ If you handle sensitive data or need field-level access restrictions:
      ```
      
 
-3. **Start chatting!** 
+4. **Start chatting!**
    Open Claude Desktop and start asking questions about your data.
 
 ### Configuration
