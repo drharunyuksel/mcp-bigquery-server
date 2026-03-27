@@ -35,6 +35,18 @@ Here's all you need to do:
 - **Auto-discover sensitive fields** — automatically scan your entire BigQuery data warehouse for columns matching sensitive patterns (names, emails, SSNs, medical records, API keys, etc.) and add them to the restricted list. New tables and columns are protected automatically on each scan — no manual maintenance required.
 - **Fully configurable** — everything is driven by `config.json`. Add your own detection patterns to match your organization's naming conventions (e.g., `%guardian_name%`, `%beneficiary%`), adjust scan frequency, set billing limits, and define per-table field restrictions. The scanner picks up your custom patterns on the next run and automatically protects any matching columns across all datasets.
 
+## Which Setup Is Right for You?
+
+| | Simple Mode | Protected Mode |
+|---|---|---|
+| **Use when** | Personal projects, non-sensitive data | PHI, PII, financial data, HIPAA-regulated environments |
+| **Install** | `npx` or Smithery — no local setup needed | Clone and run locally with a `config.json` |
+| **Field restrictions** | None | Define `preventedFields` to block sensitive columns |
+| **Auto-scanner** | Not available | Discovers sensitive columns across all datasets automatically |
+| **Setup** | [Option 1](#option-1-quick-install-via-smithery-recommended) below | [Option 2](#option-2-manual-setup) below |
+
+**Why local deployment matters for sensitive data:** LLM inference happens in the cloud. When an AI agent queries BigQuery, the results are sent to the LLM provider's servers (Anthropic, OpenAI, etc.) for processing — they leave your network. BigQuery IAM controls who can *reach* your data; field restrictions control what the *AI agent surfaces into LLM responses*. These are different protection boundaries. Configuring `preventedFields` ensures PHI and PII never enter the LLM conversation context, regardless of how many queries the agent runs autonomously.
+
 ## Quick Start 🚀
 
 ### Prerequisites
@@ -43,7 +55,7 @@ Here's all you need to do:
 - Either Google Cloud CLI installed or a service account key file
 - Claude Desktop (currently the only supported LLM interface)
 
-### Option 1: Quick Install via Smithery (Recommended)
+### Option 1: Quick Install via Smithery (Recommended — Simple Mode)
 To install BigQuery MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@ergut/mcp-bigquery-server), run this command in your terminal:
 
 ```bash
@@ -56,8 +68,8 @@ The installer will prompt you for:
 
 Once configured, Smithery will automatically update your Claude Desktop configuration and restart the application.
 
-### Option 2: Manual Setup
-If you prefer manual configuration or need more control:
+### Option 2: Manual Setup (Protected Mode — for sensitive data)
+If you handle sensitive data or need field-level access restrictions:
 
 1. **Authenticate with Google Cloud** (choose one method):
    - Using Google Cloud CLI (great for development):
