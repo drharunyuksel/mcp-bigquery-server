@@ -40,7 +40,7 @@ Here's all you need to do:
 | | Simple Mode | Protected Mode |
 |---|---|---|
 | **Use when** | Personal projects, non-sensitive data | PHI, PII, financial data, HIPAA-regulated environments |
-| **Install** | `npx` or Smithery — no local setup needed | Clone and run locally with a `config.json` |
+| **Install** | `npx` or Smithery — no local setup needed | `npx` with `--config-file`, or clone and run locally |
 | **Field restrictions** | None | Define `preventedFields` to block sensitive columns |
 | **Auto-scanner** | Not available | Discovers sensitive columns across all datasets automatically |
 | **Setup** | [Option 1](#option-1-quick-install-via-smithery-recommended) below | [Option 2](#option-2-manual-setup) below |
@@ -85,7 +85,7 @@ If you handle sensitive data or need field-level access restrictions:
 2. **Add to your Claude Desktop config**
    Add this to your `claude_desktop_config.json`:
 
-   - Basic configuration:
+   - Basic configuration with config file:
      ```json
      {
        "mcpServers": {
@@ -97,14 +97,16 @@ If you handle sensitive data or need field-level access restrictions:
              "--project-id",
              "your-project-id",
              "--location",
-             "us-central1"
+             "us-central1",
+             "--config-file",
+             "/path/to/config.json"
            ]
          }
        }
      }
      ```
 
-   - With service account:
+   - With service account and config file:
      ```json
      {
        "mcpServers": {
@@ -118,7 +120,9 @@ If you handle sensitive data or need field-level access restrictions:
              "--location",
              "us-central1",
              "--key-file",
-             "/path/to/service-account-key.json"
+             "/path/to/service-account-key.json",
+             "--config-file",
+             "/path/to/config.json"
            ]
          }
        }
