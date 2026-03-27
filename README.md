@@ -299,9 +299,9 @@ You'll need one of these:
   - `roles/bigquery.dataViewer`
   - `roles/bigquery.jobUser`
 
-## Developer Setup (Optional) 🔧
+## Local Build (Optional) 🔧
 
-Want to customize or contribute? Here's how to set it up locally:
+Run a local build instead of `npx` — useful for contributing, testing changes, or running a pinned version. Supports both Simple and Protected Mode.
 
 ```bash
 # Clone and install
@@ -314,27 +314,46 @@ npm run build
 ```
 
 Then update your Claude Desktop config to point to your local build:
-```json
-{
-  "mcpServers": {
-    "bigquery": {
-      "command": "node",
-      "args": [
-        "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
-        "--project-id",
-        "your-project-id",
-        "--location",
-        "us-central1",
-        "--key-file",
-        "/path/to/service-account-key.json",
-        "--config-file",
-        "/path/to/config.json",
-        "--maximum-bytes-billed",
-        "2000000000"
-      ]
+
+- **Simple Mode** (no config file):
+  ```json
+  {
+    "mcpServers": {
+      "bigquery": {
+        "command": "node",
+        "args": [
+          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
+          "--project-id",
+          "your-project-id",
+          "--location",
+          "us-central1"
+        ]
+      }
     }
   }
-}
+  ```
+
+- **Protected Mode** (with config file):
+  ```json
+  {
+    "mcpServers": {
+      "bigquery": {
+        "command": "node",
+        "args": [
+          "/path/to/your/clone/mcp-bigquery-server/dist/index.js",
+          "--project-id",
+          "your-project-id",
+          "--location",
+          "us-central1",
+          "--key-file",
+          "/path/to/service-account-key.json",
+          "--config-file",
+          "/path/to/config.json"
+        ]
+      }
+    }
+  }
+  ```
 ```
 
 ## Current Limitations ⚠️
