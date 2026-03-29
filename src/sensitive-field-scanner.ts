@@ -128,10 +128,13 @@ export async function runDailyScanIfNeeded(
     ? existingConfig.sensitiveFieldPatterns as string[]
     : DEFAULT_SENSITIVE_PATTERNS;
 
-  // Check staleness
+  const existingPreventedFields = (existingConfig.preventedFields ?? {}) as Record<string, string[]>;
+  const isEmpty = Object.keys(existingPreventedFields).length === 0;
+
+  // Check staleness — but always run scan on first startup (empty preventedFields)
   try {
     const stat = await fs.stat(configPath);
-    if (!isStale(stat.mtime, frequencyDays)) {
+    if (!isEmpty && !isStale(stat.mtime, frequencyDays)) {
       console.error(`Config is fresh (scan frequency: ${frequencyDays} day(s)), skipping sensitive field scan.`);
       return false;
     }
@@ -140,8 +143,6 @@ export async function runDailyScanIfNeeded(
   }
 
   console.error(`Config is stale (scan frequency: ${frequencyDays} day(s)), running sensitive field scan...`);
-
-  const existingPreventedFields = (existingConfig.preventedFields ?? {}) as Record<string, string[]>;
 
   const discovered = await scanSensitiveFields(bigquery, patterns);
   const merged = mergeFields(existingPreventedFields, discovered);
