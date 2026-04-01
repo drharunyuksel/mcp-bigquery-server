@@ -96,9 +96,10 @@ export function mergeFields(
   return sorted;
 }
 
-function isStale(mtime: Date, frequencyDays: number): boolean {
+function isStale(lastScannedAt: string | undefined, frequencyDays: number): boolean {
   if (frequencyDays <= 0) return false;
-  const elapsedMs = Date.now() - mtime.getTime();
+  if (!lastScannedAt) return true; // Never scanned — always run
+  const elapsedMs = Date.now() - new Date(lastScannedAt).getTime();
   const frequencyMs = frequencyDays * 24 * 60 * 60 * 1000;
   return elapsedMs >= frequencyMs;
 }
@@ -129,25 +130,22 @@ export async function runDailyScanIfNeeded(
     : DEFAULT_SENSITIVE_PATTERNS;
 
   const existingPreventedFields = (existingConfig.preventedFields ?? {}) as Record<string, string[]>;
-  const isEmpty = Object.keys(existingPreventedFields).length === 0;
+  const lastScannedAt = typeof existingConfig.lastScannedAt === 'string' ? existingConfig.lastScannedAt : undefined;
 
-  // Check staleness — but always run scan on first startup (empty preventedFields)
-  try {
-    const stat = await fs.stat(configPath);
-    if (!isEmpty && !isStale(stat.mtime, frequencyDays)) {
-      console.error(`Config is fresh (scan frequency: ${frequencyDays} day(s)), skipping sensitive field scan.`);
-      return false;
-    }
-  } catch {
-    // File doesn't exist — proceed with scan
+  if (!isStale(lastScannedAt, frequencyDays)) {
+    console.error(`Config is fresh (last scanned: ${lastScannedAt}, frequency: ${frequencyDays} day(s)), skipping sensitive field scan.`);
+    return false;
   }
 
-  console.error(`Config is stale (scan frequency: ${frequencyDays} day(s)), running sensitive field scan...`);
+  console.error(lastScannedAt
+    ? `Config is stale (last scanned: ${lastScannedAt}, frequency: ${frequencyDays} day(s)), running sensitive field scan...`
+    : 'First startup — running sensitive field scan...'
+  );
 
   const discovered = await scanSensitiveFields(bigquery, patterns);
   const merged = mergeFields(existingPreventedFields, discovered);
 
-  const updatedConfig = { ...existingConfig, preventedFields: merged };
+  const updatedConfig = { ...existingConfig, preventedFields: merged, lastScannedAt: new Date().toISOString() };
   await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2) + '\n', 'utf-8');
   console.error(`Scan complete: config updated with ${Object.keys(merged).length} tables.`);
 

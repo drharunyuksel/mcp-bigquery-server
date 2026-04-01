@@ -13,6 +13,11 @@ import { BigQuery } from '@google-cloud/bigquery';
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
 import { runDailyScanIfNeeded } from './sensitive-field-scanner.js';
+import {
+  enforceFieldRestrictions,
+  enforceAllowedTables,
+  type FieldRestrictionMap,
+} from './sql-enforcement.js';
 
 // Define configuration interface
 interface ServerConfig {
@@ -23,11 +28,29 @@ interface ServerConfig {
   maximumBytesBilled?: string;
 }
 
-// Define BigQuery configuration interface
-interface BigQueryConfig {
+// Define BigQuery configuration interfaces (discriminated union by protectionMode)
+type ProtectionMode = 'off' | 'allowedTables' | 'autoProtect';
+
+interface BigQueryConfigBase {
   maximumBytesBilled: string;
+}
+
+interface BigQueryConfigOff extends BigQueryConfigBase {
+  protectionMode: 'off';
+}
+
+interface BigQueryConfigAllowedTables extends BigQueryConfigBase {
+  protectionMode: 'allowedTables';
+  allowedTables: string[];
+  preventedFieldsInAllowedTables: FieldRestrictionMap;
+}
+
+interface BigQueryConfigAutoProtect extends BigQueryConfigBase {
+  protectionMode: 'autoProtect';
   preventedFields: FieldRestrictionMap;
 }
+
+type BigQueryConfig = BigQueryConfigOff | BigQueryConfigAllowedTables | BigQueryConfigAutoProtect;
 
 async function validateConfig(config: ServerConfig): Promise<void> {
   // Check if key file exists and is readable
@@ -76,18 +99,16 @@ async function validateConfig(config: ServerConfig): Promise<void> {
       await fs.access(resolvedConfigPath, fsConstants.R_OK);
       config.configFile = resolvedConfigPath;
     } catch (error) {
-      console.error('Configuration file access error details:', error);
-      if (error instanceof Error) {
-        const nodeError = error as NodeJS.ErrnoException;
-        if (nodeError.code === 'EACCES') {
-          throw new Error(`Permission denied accessing config file: ${resolvedConfigPath}. Please check file permissions.`);
-        } else if (nodeError.code === 'ENOENT') {
-          throw new Error(`Config file not found: ${resolvedConfigPath}. Please verify the file path.`);
-        } else {
-          throw new Error(`Unable to access config file: ${resolvedConfigPath}. Error: ${nodeError.message}`);
-        }
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError?.code === 'ENOENT') {
+        configError = `Config file not found: ${resolvedConfigPath}. Your MCP server is configured with --config-file, which requires a valid config file. To fix this: (1) create a config file at the path above (see the example in the repository: https://github.com/ergut/mcp-bigquery-server), or (2) correct the path in --config-file, or (3) remove the --config-file flag from your MCP server settings to run without protection.`;
+        console.error(configError);
+      } else if (nodeError?.code === 'EACCES') {
+        configError = `Permission denied accessing config file: ${resolvedConfigPath}. Please check file permissions.`;
+        console.error(configError);
       } else {
-        throw new Error(`Unexpected error accessing config file: ${resolvedConfigPath}`);
+        configError = `Unable to access config file: ${resolvedConfigPath}. Error: ${nodeError?.message ?? 'Unknown error'}`;
+        console.error(configError);
       }
     }
   }
@@ -166,29 +187,31 @@ let config: ServerConfig;
 let bigquery: BigQuery;
 let resourceBaseUrl: URL;
 
-type FieldRestrictionMap = Record<string, string[]>;
 let bigqueryConfig: BigQueryConfig;
+let configError: string | null = null;
 
-// Aggregation functions that allow restricted columns when used as direct arguments.
-// MIN/MAX are excluded because they return actual individual values (e.g. MIN(name) leaks a real name).
-const AGGREGATE_FUNCTIONS = ["count", "countif", "avg", "sum"];
-
-interface StarUsage {
-  qualifier?: string;
-  exceptColumns: Set<string>;
-  exceptBareColumns: Set<string>;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function parseFieldRestrictionMap(raw: unknown, label: string): FieldRestrictionMap {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+  const normalized: FieldRestrictionMap = {};
+  for (const [tableName, fields] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(fields) || fields.some((field) => typeof field !== 'string')) {
+      throw new Error(`Invalid field list for table "${tableName}" in ${label}. Each value must be an array of column name strings.`);
+    }
+    normalized[tableName.toLowerCase()] = (fields as string[]).map((field) => field.toLowerCase());
+  }
+  return normalized;
 }
 
 async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
-  const explicitPathProvided = Boolean(configFile);
-  const resolvedPath = configFile
-    ? path.resolve(configFile)
-    : path.resolve(process.cwd(), 'config.json');
+  // No --config-file flag → simple/off mode (no auto-discovery)
+  if (!configFile) {
+    console.error('No --config-file flag provided — protection mode: off');
+    return { protectionMode: 'off', maximumBytesBilled: '1000000000' };
+  }
 
+  const resolvedPath = path.resolve(configFile);
   let fileContents: string;
 
   try {
@@ -196,15 +219,7 @@ async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
   } catch (error) {
     const nodeError = error as NodeJS.ErrnoException;
     if (nodeError?.code === 'ENOENT') {
-      if (explicitPathProvided) {
-        throw new Error(`Config file not found: ${resolvedPath}`);
-      }
-      // No config file found and none explicitly requested — use defaults
-      console.error('No config.json found, using defaults (1GB query limit, no field restrictions).');
-      return {
-        maximumBytesBilled: '1000000000',
-        preventedFields: {},
-      };
+      throw new Error(`Config file not found: ${resolvedPath}`);
     }
     throw new Error(`Unable to read config file ${resolvedPath}: ${nodeError?.message ?? 'Unknown error'}`);
   }
@@ -212,317 +227,70 @@ async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
   try {
     const parsed = JSON.parse(fileContents);
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('Config file must be a JSON object with maximumBytesBilled and preventedFields properties.');
+      throw new Error('Config file must be a JSON object.');
     }
 
-    const config = parsed as Record<string, unknown>;
+    const raw = parsed as Record<string, unknown>;
 
     // Validate maximumBytesBilled
-    if (!config.maximumBytesBilled || typeof config.maximumBytesBilled !== 'string') {
+    if (!raw.maximumBytesBilled || typeof raw.maximumBytesBilled !== 'string') {
       throw new Error('Config file must contain a maximumBytesBilled string property.');
     }
+    const maximumBytesBilled = raw.maximumBytesBilled;
 
-    // Validate preventedFields
-    if (!config.preventedFields || typeof config.preventedFields !== 'object' || Array.isArray(config.preventedFields)) {
-      throw new Error('Config file must contain a preventedFields object mapping table names to arrays of column names.');
+    // Resolve protection mode
+    const rawMode = raw.protectionMode as string | undefined;
+    const validModes: ProtectionMode[] = ['off', 'allowedTables', 'autoProtect'];
+
+    if (rawMode !== undefined && !validModes.includes(rawMode as ProtectionMode)) {
+      throw new Error(
+        `Unknown protectionMode "${rawMode}". Valid values: ${validModes.map((m) => `"${m}"`).join(', ')}`,
+      );
     }
 
-    const normalized: FieldRestrictionMap = {};
+    // Explicit "off" mode
+    if (rawMode === 'off') {
+      console.error(`Protection mode: off (from ${resolvedPath})`);
+      return { protectionMode: 'off', maximumBytesBilled };
+    }
 
-    for (const [tableName, fields] of Object.entries(config.preventedFields as Record<string, unknown>)) {
-      if (!Array.isArray(fields) || fields.some((field) => typeof field !== 'string')) {
-        throw new Error(`Invalid field list for table "${tableName}". Each table value must be an array of column name strings.`);
+    // "allowedTables" mode
+    if (rawMode === 'allowedTables') {
+      if (!Array.isArray(raw.allowedTables) || raw.allowedTables.some((t: unknown) => typeof t !== 'string')) {
+        throw new Error('allowedTables mode requires an "allowedTables" array of table name strings.');
       }
+      const allowedTables = (raw.allowedTables as string[]).map((t) => t.toLowerCase());
+      if (allowedTables.length === 0) {
+        throw new Error('allowedTables array is empty. At least one table must be listed, otherwise no queries can execute.');
+      }
+      const preventedFieldsInAllowedTables = parseFieldRestrictionMap(
+        raw.preventedFieldsInAllowedTables,
+        'preventedFieldsInAllowedTables',
+      );
 
-      normalized[tableName.toLowerCase()] = (fields as string[]).map((field) => field.toLowerCase());
+      console.error(`Protection mode: allowedTables (${allowedTables.length} tables, field restrictions for ${Object.keys(preventedFieldsInAllowedTables).length} tables) from ${resolvedPath}`);
+      return {
+        protectionMode: 'allowedTables',
+        maximumBytesBilled,
+        allowedTables,
+        preventedFieldsInAllowedTables,
+      };
     }
 
-    // Use CLI parameter if provided, otherwise use config file value
-    const finalMaximumBytesBilled = config.maximumBytesBilled || config.maximumBytesBilled as string;
+    // "autoProtect" mode (explicit or implicit via missing protectionMode key — backward compatible)
+    const preventedFields = parseFieldRestrictionMap(raw.preventedFields, 'preventedFields');
 
-    const result: BigQueryConfig = {
-      maximumBytesBilled: finalMaximumBytesBilled,
-      preventedFields: normalized,
+    console.error(`Protection mode: autoProtect, maximumBytesBilled=${maximumBytesBilled}, field restrictions for ${Object.keys(preventedFields).length} tables from ${resolvedPath}`);
+    return {
+      protectionMode: 'autoProtect',
+      maximumBytesBilled,
+      preventedFields,
     };
-
-    const source = config.maximumBytesBilled ? `CLI parameter` : `${resolvedPath}`;
-    console.error(`Using maximumBytesBilled=${result.maximumBytesBilled} from ${source}, field restrictions for ${Object.keys(normalized).length} tables from ${resolvedPath}`);
-    return result;
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error('Config file is not valid JSON');
     }
     throw error;
-  }
-}
-
-function buildTableAliasMap(sql: string): Record<string, string> {
-  const aliasMap: Record<string, string> = {};
-  const tableRefPattern = /\b(?:from|join)\s+([a-z0-9_.]+)(?:\s+(?:as\s+)?([a-z0-9_]+))?/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = tableRefPattern.exec(sql)) !== null) {
-    const [, tableName, alias] = match;
-    if (alias) {
-      aliasMap[alias] = tableName;
-    }
-  }
-
-  return aliasMap;
-}
-
-function referencesSameTable(candidate: string, expected: string): boolean {
-  if (candidate === expected) {
-    return true;
-  }
-  if (candidate.endsWith(`.${expected}`)) {
-    return true;
-  }
-  return expected.endsWith(`.${candidate}`);
-}
-
-function extractSelectClause(sql: string): string {
-  const clauses: string[] = [];
-
-  // Standard SQL: SELECT ... FROM
-  const standardMatch = sql.match(/\bselect\b([\s\S]*?)\bfrom\b/);
-  if (standardMatch) {
-    clauses.push(standardMatch[1]);
-  }
-
-  // Pipe syntax: |> SELECT ... (terminated by next pipe operator, end of string, or semicolon)
-  const pipeSelectPattern = /\|>\s*select\b([\s\S]*?)(?=\|>|;|$)/g;
-  let match: RegExpExecArray | null;
-  while ((match = pipeSelectPattern.exec(sql)) !== null) {
-    clauses.push(match[1]);
-  }
-
-  return clauses.join(' , ');
-}
-
-function parseExceptColumns(segment: string): { full: Set<string>; bare: Set<string> } {
-  const full = new Set<string>();
-  const bare = new Set<string>();
-
-  segment
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .forEach((value) => {
-      const cleaned = value.replace(/`/g, '');
-      const normalized = cleaned.toLowerCase();
-      full.add(normalized);
-
-      const bareName = normalized.split('.').pop();
-      if (bareName) {
-        bare.add(bareName);
-      }
-    });
-
-  return { full, bare };
-}
-
-function extractStarUsages(selectClause: string): StarUsage[] {
-  const usages: StarUsage[] = [];
-  if (!selectClause) {
-    return usages;
-  }
-
-  const starPattern = /(?:\b([a-z0-9_.]+)\.)?\*\s*(?:except\s*\(([^)]+)\))?/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = starPattern.exec(selectClause)) !== null) {
-    const matchIndex = match.index ?? starPattern.lastIndex - match[0].length;
-    const precedingIndex = matchIndex - 1;
-    const charBefore = precedingIndex >= 0 ? selectClause[precedingIndex] : ' ';
-
-    if (charBefore === '(') {
-      // Likely part of COUNT(*) or similar aggregate; skip.
-      continue;
-    }
-
-    if (matchIndex > 0 && !/[,\s]/.test(charBefore)) {
-      // Skip tokens appearing in string literals or identifiers (e.g. '*_suffix').
-      continue;
-    }
-
-    const qualifier = match[1]?.toLowerCase();
-    const exceptSegment = match[2];
-    const exceptColumns = new Set<string>();
-    const exceptBareColumns = new Set<string>();
-
-    if (exceptSegment) {
-      const parsed = parseExceptColumns(exceptSegment);
-      parsed.full.forEach((value) => exceptColumns.add(value));
-      parsed.bare.forEach((value) => exceptBareColumns.add(value));
-    }
-
-    usages.push({ qualifier, exceptColumns, exceptBareColumns });
-  }
-
-  return usages;
-}
-
-function starUsageCoversField(
-  usage: StarUsage,
-  field: string,
-  tableName: string,
-  aliasToTableMap: Record<string, string>,
-): boolean {
-  if (usage.exceptBareColumns.has(field)) {
-    return true;
-  }
-
-  if (usage.exceptColumns.has(field)) {
-    return true;
-  }
-
-  if (usage.exceptColumns.has(`${tableName}.${field}`)) {
-    return true;
-  }
-
-  if (!usage.qualifier) {
-    return false;
-  }
-
-  const qualifier = usage.qualifier;
-  if (usage.exceptColumns.has(`${qualifier}.${field}`)) {
-    return true;
-  }
-
-  const resolvedTable = aliasToTableMap[qualifier];
-  if (resolvedTable) {
-    if (usage.exceptColumns.has(`${resolvedTable}.${field}`)) {
-      return true;
-    }
-    if (usage.exceptBareColumns.has(field) && referencesSameTable(resolvedTable, tableName)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// Strip SQL comments and string literals so they don't trigger false positives
-// in field reference checks.
-function stripCommentsAndLiterals(sql: string): string {
-  return sql
-    // Remove single-line comments (-- ...)
-    .replace(/--[^\n]*/g, '')
-    // Remove multi-line comments (/* ... */)
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // Remove single-quoted string literals ('...')
-    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
-    // Remove double-quoted identifiers ("...")
-    .replace(/"(?:[^"\\]|\\.)*"/g, '""');
-}
-
-function enforceFieldRestrictions(sql: string, restrictions: FieldRestrictionMap): void {
-  if (!Object.keys(restrictions).length) {
-    return;
-  }
-
-  const normalizedSql = stripCommentsAndLiterals(sql.replace(/`/g, '')).toLowerCase();
-  const blockedColumnsByTable: Record<string, Set<string>> = {};
-  const aliasToTableMap = buildTableAliasMap(normalizedSql);
-  const selectClause = extractSelectClause(normalizedSql);
-  const starUsages = extractStarUsages(selectClause);
-
-  for (const [tableName, restrictedFields] of Object.entries(restrictions)) {
-    if (!normalizedSql.includes(tableName)) {
-      continue;
-    }
-
-    const qualifiedStarPattern = new RegExp(`\\b${escapeRegExp(tableName)}\\.\\*`);
-    const aliasStarDetected = Object.entries(aliasToTableMap).some(([alias, referencedTable]) => {
-      if (!referencesSameTable(referencedTable, tableName)) {
-        return false;
-      }
-      const aliasPattern = new RegExp(`\\b${escapeRegExp(alias)}\\.\\*`);
-      return aliasPattern.test(normalizedSql);
-    });
-
-    const relevantStarUsages = starUsages.filter((usage) => {
-      if (!usage.qualifier) {
-        return true;
-      }
-
-      const resolved = aliasToTableMap[usage.qualifier] ?? usage.qualifier;
-      return referencesSameTable(resolved, tableName);
-    });
-
-    // If there's no SELECT or AGGREGATE clause (e.g. FROM table |> LIMIT 10),
-    // all columns are returned implicitly — treat as SELECT * violation.
-    // AGGREGATE queries are safe since they only return aggregate results.
-    const hasNoSelectClause = !selectClause.trim()
-      && !/\|>\s*aggregate\b/.test(normalizedSql);
-
-    const starViolation = ((): boolean => {
-      if (hasNoSelectClause) {
-        return true;
-      }
-
-      if (!relevantStarUsages.length && !qualifiedStarPattern.test(normalizedSql) && !aliasStarDetected) {
-        return false;
-      }
-
-      if (!relevantStarUsages.length) {
-        return true;
-      }
-
-      return relevantStarUsages.some((usage) => {
-        if (!usage.exceptBareColumns.size && !usage.exceptColumns.size) {
-          return true;
-        }
-
-        return restrictedFields.some((field) => !starUsageCoversField(usage, field, tableName, aliasToTableMap));
-      });
-    })();
-
-    if (starViolation) {
-      if (!blockedColumnsByTable[tableName]) {
-        blockedColumnsByTable[tableName] = new Set<string>();
-      }
-      for (const field of restrictedFields) {
-        blockedColumnsByTable[tableName].add(field);
-      }
-    }
-
-    for (const field of restrictedFields) {
-      const fieldPattern = new RegExp(`\\b${escapeRegExp(field)}\\b`);
-      // Match aggregate functions containing the restricted field, including complex
-      // expressions like COUNTIF(field IS NOT NULL) or COUNT(DISTINCT field).
-      // Uses a non-greedy match for the closing paren to handle nested expressions.
-      const aggregatePattern = new RegExp(
-        `\\b(?:${AGGREGATE_FUNCTIONS.join('|')})\\s*\\([^)]*\\b${escapeRegExp(field)}\\b[^)]*\\)`,
-        'g',
-      );
-
-      // Remove aggregate usages and EXCEPT clauses before checking for direct field references
-      const sqlWithoutAggregatedUsage = normalizedSql
-        .replace(aggregatePattern, '')
-        .replace(/\bexcept\s*\([^)]*\)/g, '');
-
-      if (fieldPattern.test(sqlWithoutAggregatedUsage)) {
-        if (!blockedColumnsByTable[tableName]) {
-          blockedColumnsByTable[tableName] = new Set<string>();
-        }
-        blockedColumnsByTable[tableName].add(field);
-      }
-    }
-  }
-
-  if (Object.keys(blockedColumnsByTable).length) {
-    const messageDetails = Object.entries(blockedColumnsByTable)
-      .map(([table, fields]) => {
-        const columns = Array.from(fields).map((column) => `"${column}"`).join(', ');
-        return `table "${table}" columns ${columns}`;
-      })
-      .join('; ');
-
-    const allowedAggregates = `[${AGGREGATE_FUNCTIONS.map((fn) => `"${fn}"`).join(', ')}]`;
-
-    throw new Error(`Restricted fields detected for ${messageDetails}. You can only use these columns inside ${allowedAggregates} aggregate functions or exclude them with SELECT * EXCEPT (...).`);
   }
 }
 
@@ -547,21 +315,25 @@ try {
   bigquery = new BigQuery(bigqueryOptions);
   resourceBaseUrl = new URL(`bigquery://${config.projectId}`);
 
-  // Run daily sensitive field scan only if a config file exists or was explicitly provided
-  const configFilePath = config.configFile
-    ? path.resolve(config.configFile)
-    : path.resolve(process.cwd(), 'config.json');
-  try {
-    await fs.access(configFilePath, fsConstants.R_OK);
-    await runDailyScanIfNeeded(bigquery, configFilePath);
-  } catch (error) {
-    if (config.configFile) {
-      console.error('Warning: daily sensitive field scan failed, using existing config.', error);
-    }
-    // No config file and none requested — skip scan silently
+  // Load config first to determine protection mode
+  if (configError) {
+    // Config file was specified but inaccessible — server starts but queries are blocked
+    bigqueryConfig = { protectionMode: 'off', maximumBytesBilled: config.maximumBytesBilled ?? '1000000000' };
+  } else {
+    bigqueryConfig = await loadConfiguration(config.configFile);
   }
 
-  bigqueryConfig = await loadConfiguration(config.configFile);
+  // Only run auto-scan in autoProtect mode
+  if (!configError && bigqueryConfig.protectionMode === 'autoProtect') {
+    const configFilePath = path.resolve(config.configFile!);
+    try {
+      await runDailyScanIfNeeded(bigquery, configFilePath);
+      // Re-load config after scan may have updated preventedFields
+      bigqueryConfig = await loadConfiguration(config.configFile);
+    } catch (error) {
+      console.error('Warning: daily sensitive field scan failed, using existing config.', error);
+    }
+  }
 } catch (error) {
   console.error('Initialization error:', error);
   process.exit(1);
@@ -659,8 +431,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "query") {
+    // Block all queries if config file is missing/inaccessible
+    if (configError) {
+      return {
+        content: [{ type: "text", text: configError }],
+        isError: true,
+      };
+    }
+
     let sql = request.params.arguments?.sql as string;
-    
+
     // Validate read-only query
     const forbiddenPattern = /\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|MERGE|TRUNCATE|GRANT|REVOKE|EXECUTE|BEGIN|COMMIT|ROLLBACK)\b/i;
     if (forbiddenPattern.test(sql)) {
@@ -673,7 +453,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         sql = qualifyTablePath(sql, config.projectId);
       }
 
-      enforceFieldRestrictions(sql, bigqueryConfig.preventedFields);
+      // Enforce protection based on active mode
+      switch (bigqueryConfig.protectionMode) {
+        case 'off':
+          break;
+        case 'allowedTables':
+          enforceAllowedTables(sql, bigqueryConfig.allowedTables);
+          enforceFieldRestrictions(sql, bigqueryConfig.preventedFieldsInAllowedTables);
+          break;
+        case 'autoProtect':
+          enforceFieldRestrictions(sql, bigqueryConfig.preventedFields);
+          break;
+      }
 
       const [rows] = await bigquery.query({
         query: sql,
@@ -689,7 +480,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const message = error instanceof Error ? error.message : 'An unknown error occurred while executing the query.';
       console.error('Query tool error:', error);
 
-      if (error instanceof Error && message.includes('restricted in this tool')) {
+      // Enforcement errors (field restrictions, table allowlist) are returned as
+      // non-errors so the LLM can reformulate its query based on the guidance.
+      if (error instanceof Error && (
+        message.includes('Restricted fields') ||
+        message.includes('Access denied') ||
+        message.includes('Unable to determine')
+      )) {
         return {
           content: [{ type: "text", text: message }],
           isError: false,
