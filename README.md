@@ -186,6 +186,65 @@ Data warehouses often contain highly sensitive information — patient records, 
 
 This server gives administrators fine-grained control over which columns an AI agent can access, ensuring sensitive data stays protected while still allowing the AI to perform useful analytical queries on non-sensitive fields.
 
+### Security Model: Cooperative Guardrails, Not a SQL Firewall
+
+**Important:** The field restrictions and table allowlists in this server are designed as **cooperative guardrails for AI agents**, not as a hard security boundary against adversarial attackers.
+
+The threat model is straightforward: when an AI agent queries your BigQuery warehouse, the query results are sent to the LLM provider's servers. Field restrictions prevent the agent from inadvertently including sensitive columns (PII, PHI, secrets) in those results. When the agent encounters a restriction error, it reads the guidance in the error message and reformulates its query — using aggregate functions, `EXCEPT` clauses, or simply dropping the restricted field. In practice, AI agents cooperate immediately and consistently.
+
+This system uses regex-based SQL analysis to detect restricted field usage. We performed penetration testing during development and fixed several bypass vectors (struct-alias expansion, comma-join evasion, implicit `SELECT *`). However, regex-based parsing cannot guarantee coverage of every possible SQL construct — edge cases involving deeply nested CTEs, exotic BigQuery syntax, or adversarial query crafting may exist. The enforcement logic is designed to **fail closed** (block ambiguous queries rather than allow them), but it is not equivalent to a database-level security policy.
+
+**What this is:**
+- Effective guidance that prevents AI agents from accessing sensitive data in normal usage
+- A safety net that catches common query patterns (`SELECT *`, direct field references, aliases)
+- Hardened against known bypass techniques discovered through penetration testing
+
+**What this is not:**
+- A replacement for BigQuery IAM, column-level security, or row-level access policies
+- A defense against a malicious human deliberately crafting bypass queries
+- A certified SQL parser — it uses pattern matching, not a full AST
+
+For environments requiring strict compliance guarantees, combine these guardrails with BigQuery's native [column-level security](https://cloud.google.com/bigquery/docs/column-level-security-intro) and [authorized views](https://cloud.google.com/bigquery/docs/authorized-views).
+
+### Protection Modes
+
+The server supports three protection modes, configured via `protectionMode` in `config.json`:
+
+| Mode | Description | Default when |
+|---|---|---|
+| `off` | No protection — all tables and fields accessible | No config file exists |
+| `allowedTables` | Table allowlist — only listed tables can be queried | Must be explicitly set |
+| `autoProtect` | Auto-scans for sensitive fields, enforces `preventedFields` | Config file exists without `protectionMode` key |
+
+#### `allowedTables` Mode
+
+Restricts the AI agent to a specific set of tables. Queries against any other table are rejected immediately. Optionally define field restrictions within allowed tables:
+
+```json
+{
+  "protectionMode": "allowedTables",
+  "maximumBytesBilled": "10000000000",
+  "allowedTables": [
+    "analytics.page_views",
+    "analytics.sessions",
+    "reporting.daily_summary"
+  ],
+  "preventedFieldsInAllowedTables": {
+    "analytics.page_views": ["user_ip", "user_agent"]
+  }
+}
+```
+
+- `preventedFieldsInAllowedTables` is optional — defaults to `{}` (no field restrictions within allowed tables)
+- The auto-scan does **not** run in this mode — all restrictions are manually configured
+- `INFORMATION_SCHEMA` queries are always allowed for schema discovery
+
+#### `autoProtect` Mode (Field-Level Restrictions)
+
+The original protection mode. Auto-scans your BigQuery datasets for sensitive columns and enforces `preventedFields`. Manual entries in `preventedFields` persist through scans (the merge is additive-only). See details below.
+
+Existing config files without `protectionMode` continue working — they default to `autoProtect` for backward compatibility.
+
 ### Field-Level Access Restrictions
 
 Define `preventedFields` in your config to block the AI agent from accessing specific columns:
@@ -209,7 +268,7 @@ The server blocks the query and returns a clear, instructive error:
 
 ```
 Restricted fields detected for table "healthcare.patients" columns "first_name", "last_name".
-You can only use these columns inside ["count", "countif", "avg", "sum", "min", "max"]
+You can only use these columns inside ["count", "countif", "avg", "sum"]
 aggregate functions or exclude them with SELECT * EXCEPT (...).
 ```
 
@@ -233,7 +292,8 @@ FROM healthcare.patients
 | `SELECT restricted_col FROM table` | Blocked with error message |
 | `SELECT * FROM table` | Blocked (would expose restricted fields) |
 | `SELECT * EXCEPT(restricted_cols) FROM table` | Allowed |
-| `COUNT(restricted_col)`, `AVG(...)`, `SUM(...)`, `MIN(...)`, `MAX(...)` | Allowed (aggregates don't expose individual values) |
+| `COUNT(restricted_col)`, `AVG(...)`, `SUM(...)`, `COUNTIF(...)` | Allowed (aggregates don't expose individual values) |
+| `MIN(restricted_col)`, `MAX(restricted_col)` | Blocked (returns actual individual values) |
 | `SELECT non_restricted_col FROM table` | Allowed |
 
 **Server-side logging:** Every blocked query is logged on the server side, giving administrators visibility into what the AI agent attempted to access:
@@ -365,8 +425,7 @@ Then update your Claude Desktop config to point to your local build:
 
 ## Current Limitations ⚠️
 
-- MCP support is currently only available in Claude Desktop (developer preview)
-- Connections are limited to local MCP servers running on the same machine
+- The configuration examples above are shown for Claude Desktop and Claude Code, but any MCP-compatible client can use this server — provide the same JSON configuration to your AI agent and it will adapt to its own setup
 - Queries are read-only with configurable processing limits (set in config.json)
 - While both tables and views are supported, some complex view types might have limitations
 - A config.json file is optional; without one the server uses safe defaults

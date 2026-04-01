@@ -1,5 +1,9 @@
 {
+  "_comment": "Set protectionMode to 'off', 'allowedTables', or 'autoProtect'. If protectionMode is not set, defaults to autoProtect for backward compatibility.",
   "maximumBytesBilled": "10000000000",
+  "protectionMode": "autoProtect",
+
+  "_autoProtect": "Settings below are used only in autoProtect mode.",
   "sensitiveFieldPatterns": [
     "%first_name%", "%last_name%", "%full_name%", "%fullname%",
     "%patient_name%", "%member_name%",
@@ -19,5 +23,16 @@
       "last_name",
       "email"
     ]
+  },
+
+  "_allowedTables": "Settings below are used only in allowedTables mode.",
+  "allowedTables": [
+    "analytics.page_views",
+    "analytics.sessions",
+    "reporting.daily_summary"
+  ],
+  "preventedFieldsInAllowedTables": {
+    "analytics.page_views": ["user_ip", "user_agent"],
+    "analytics.sessions": ["session_token"]
   }
 }
