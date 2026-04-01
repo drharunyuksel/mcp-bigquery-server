@@ -205,11 +205,13 @@ function parseFieldRestrictionMap(raw: unknown, label: string): FieldRestriction
 }
 
 async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
-  const explicitPathProvided = Boolean(configFile);
-  const resolvedPath = configFile
-    ? path.resolve(configFile)
-    : path.resolve(process.cwd(), 'config.json');
+  // No --config-file flag → simple/off mode (no auto-discovery)
+  if (!configFile) {
+    console.error('No --config-file flag provided — protection mode: off');
+    return { protectionMode: 'off', maximumBytesBilled: '1000000000' };
+  }
 
+  const resolvedPath = path.resolve(configFile);
   let fileContents: string;
 
   try {
@@ -217,12 +219,7 @@ async function loadConfiguration(configFile?: string): Promise<BigQueryConfig> {
   } catch (error) {
     const nodeError = error as NodeJS.ErrnoException;
     if (nodeError?.code === 'ENOENT') {
-      if (explicitPathProvided) {
-        throw new Error(`Config file not found: ${resolvedPath}`);
-      }
-      // No config file → off mode
-      console.error('No config.json found — protection mode: off');
-      return { protectionMode: 'off', maximumBytesBilled: '1000000000' };
+      throw new Error(`Config file not found: ${resolvedPath}`);
     }
     throw new Error(`Unable to read config file ${resolvedPath}: ${nodeError?.message ?? 'Unknown error'}`);
   }
@@ -328,9 +325,7 @@ try {
 
   // Only run auto-scan in autoProtect mode
   if (!configError && bigqueryConfig.protectionMode === 'autoProtect') {
-    const configFilePath = config.configFile
-      ? path.resolve(config.configFile)
-      : path.resolve(process.cwd(), 'config.json');
+    const configFilePath = path.resolve(config.configFile!);
     try {
       await runDailyScanIfNeeded(bigquery, configFilePath);
       // Re-load config after scan may have updated preventedFields
