@@ -142,7 +142,7 @@ If you handle sensitive data or need field-level access restrictions:
 
 ### Configuration
 
-The server supports an optional `config.json` file for advanced configuration. Without a config file, the server uses safe defaults (1GB query limit, no field restrictions). Place the file in the same directory where you run the server or specify its path with `--config-file`.
+The server supports an optional `config.json` file for advanced configuration. Without a config file (i.e., no `--config-file` flag), the server runs in Simple Mode with safe defaults (1GB query limit, no field restrictions). To enable protection, pass `--config-file /path/to/config.json` when starting the server.
 
 #### config.json Structure
 ```json
