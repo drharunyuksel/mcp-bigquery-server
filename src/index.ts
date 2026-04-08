@@ -327,12 +327,28 @@ try {
   if (!configError && bigqueryConfig.protectionMode === 'autoProtect') {
     const configFilePath = path.resolve(config.configFile!);
     try {
-      await runDailyScanIfNeeded(bigquery, configFilePath);
+      await runDailyScanIfNeeded(bigquery, configFilePath, config.location);
       // Re-load config after scan may have updated preventedFields
       bigqueryConfig = await loadConfiguration(config.configFile);
     } catch (error) {
       console.error('Warning: daily sensitive field scan failed, using existing config.', error);
+      if (bigqueryConfig.protectionMode === 'autoProtect' &&
+          Object.keys(bigqueryConfig.preventedFields).length === 0) {
+        // Fail closed: scan failed and no fields configured — block all queries
+        configError = 'autoProtect mode: the sensitive field scanner failed and no '
+          + 'existing field restrictions are configured. Queries are blocked to prevent '
+          + 'accidental exposure of sensitive data. To fix: check BigQuery connectivity, '
+          + 'verify your config file, run the scanner manually (npm run scan-fields), '
+          + 'or switch to a different protection mode.';
+        console.error(configError);
+      }
     }
+  }
+
+  // CLI --maximum-bytes-billed overrides config file value when explicitly provided
+  // Applied after config reload so it isn't overwritten by the scanner's re-read
+  if (config.maximumBytesBilled) {
+    bigqueryConfig.maximumBytesBilled = config.maximumBytesBilled;
   }
 } catch (error) {
   console.error('Initialization error:', error);
