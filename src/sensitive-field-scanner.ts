@@ -25,16 +25,32 @@ export const DEFAULT_SENSITIVE_PATTERNS: string[] = [
   '%access_key%', '%api_key%', '%credential%',
 ];
 
+// Validate that a LIKE pattern contains only safe characters (alphanumeric, %, _, .)
+const SAFE_PATTERN = /^[a-zA-Z0-9_%.\-]+$/;
+
+function validatePatterns(patterns: string[]): void {
+  for (const p of patterns) {
+    if (!SAFE_PATTERN.test(p)) {
+      throw new Error(
+        `Invalid sensitiveFieldPattern: "${p}". Patterns may only contain letters, digits, %, _, ., and -.`,
+      );
+    }
+  }
+}
+
 export async function scanSensitiveFields(
   bigquery: BigQuery,
-  patterns: string[]
+  patterns: string[],
+  location: string = 'US'
 ): Promise<SensitiveColumn[]> {
+  validatePatterns(patterns);
+
   const likeConditions = patterns
     .map(p => `LOWER(column_name) LIKE '${p}'`)
     .join('\n   OR ');
 
   const sql = `
-    FROM \`region-us\`.INFORMATION_SCHEMA.COLUMNS
+    FROM \`region-${location.toLowerCase()}\`.INFORMATION_SCHEMA.COLUMNS
     |> WHERE ${likeConditions}
     |> AGGREGATE ARRAY_AGG(column_name ORDER BY column_name) AS columns
        GROUP BY table_schema, table_name
@@ -42,7 +58,7 @@ export async function scanSensitiveFields(
   `;
 
   console.error('Scanning all datasets for sensitive fields...');
-  const [rows] = await bigquery.query({ query: sql, location: 'US' });
+  const [rows] = await bigquery.query({ query: sql, location });
 
   const results: SensitiveColumn[] = [];
   for (const row of rows) {
@@ -106,7 +122,8 @@ function isStale(lastScannedAt: string | undefined, frequencyDays: number): bool
 
 export async function runDailyScanIfNeeded(
   bigquery: BigQuery,
-  configPath: string
+  configPath: string,
+  location: string = 'US'
 ): Promise<boolean> {
   // Read config to get frequency and patterns
   let existingConfig: Record<string, unknown> = {
@@ -142,7 +159,7 @@ export async function runDailyScanIfNeeded(
     : 'First startup — running sensitive field scan...'
   );
 
-  const discovered = await scanSensitiveFields(bigquery, patterns);
+  const discovered = await scanSensitiveFields(bigquery, patterns, location);
   const merged = mergeFields(existingPreventedFields, discovered);
 
   const updatedConfig = { ...existingConfig, preventedFields: merged, lastScannedAt: new Date().toISOString() };

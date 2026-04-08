@@ -295,6 +295,10 @@ FROM healthcare.patients
 | `COUNT(restricted_col)`, `AVG(...)`, `SUM(...)`, `COUNTIF(...)` | Allowed (aggregates don't expose individual values) |
 | `MIN(restricted_col)`, `MAX(restricted_col)` | Blocked (returns actual individual values) |
 | `SELECT non_restricted_col FROM table` | Allowed |
+| `SELECT id FROM table WHERE restricted_col = '...'` | Blocked (see note below) |
+| `SELECT id FROM table ORDER BY restricted_col` | Blocked (see note below) |
+
+> **Note: Restricted fields in WHERE, ORDER BY, and other clauses are blocked**, not just fields in SELECT. Even though the query results don't contain the restricted column, the full SQL query text is sent to the LLM provider as part of the conversation. A query like `WHERE email = 'patient@example.com'` means the restricted value appears in the prompt sent to the cloud. The enforcement checks the entire query to prevent restricted data from leaving your network in any form.
 
 **Server-side logging:** Every blocked query is logged on the server side, giving administrators visibility into what the AI agent attempted to access:
 ```

@@ -11,6 +11,7 @@ interface ScanConfig {
   projectId: string;
   keyFilename?: string;
   configFile?: string;
+  location?: string;
 }
 
 interface ConfigFile {
@@ -48,10 +49,13 @@ function parseArgs(): ScanConfig {
       case 'config-file':
         config.configFile = value;
         break;
+      case 'location':
+        config.location = value;
+        break;
       default:
         throw new Error(
           `Unknown argument: ${arg}\n` +
-          'Usage: scan-sensitive-fields --project-id <id> [--key-file <path>] [--config-file <path>]'
+          'Usage: scan-sensitive-fields --project-id <id> [--key-file <path>] [--config-file <path>] [--location <region>]'
         );
     }
   }
@@ -59,7 +63,7 @@ function parseArgs(): ScanConfig {
   if (!config.projectId) {
     throw new Error(
       'Missing required argument: --project-id\n' +
-      'Usage: scan-sensitive-fields --project-id <id> [--key-file <path>] [--config-file <path>]'
+      'Usage: scan-sensitive-fields --project-id <id> [--key-file <path>] [--config-file <path>] [--location <region>]'
     );
   }
 
@@ -113,7 +117,7 @@ async function main() {
     : DEFAULT_SENSITIVE_PATTERNS;
 
   // Scan BigQuery
-  const sensitiveColumns = await scanSensitiveFields(bigquery, patterns);
+  const sensitiveColumns = await scanSensitiveFields(bigquery, patterns, scanConfig.location);
 
   // Merge and write
   const mergedFields = mergeFields(existingConfig.preventedFields || {}, sensitiveColumns);
